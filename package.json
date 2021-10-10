@@ -7,9 +7,12 @@
   },
   "dependencies": {
     "@middy/core": "^2.5.1",
+    "@middy/http-error-handler": "^2.5.1",
+    "@middy/http-json-body-parser": "^2.5.1",
     "aws-sdk": "^2.985.0",
     "axios": "^0.21.4",
     "graphql": "^15.5.3",
+    "middy": "^0.36.0",
     "request": "^2.88.2",
     "shortid": "^2.2.16",
     "sinon": "^11.1.2"

@@ -1,8 +1,11 @@
 const sinon = require('sinon');
 const { beforeEach, afterEach } = require('mocha');
 
-const { createTask } = require('../handler');
+const { createTask, getAllTasks } = require('../handler');
 const services = require('../services');
+
+const successfulActionResult = { statusCode: 200 };
+const failedActionResult = { statusCode: 400 };
 
 describe('handler/createTask', () => {
   let createTaskServiceStub;
@@ -22,9 +25,6 @@ describe('handler/createTask', () => {
     'isChecked': false,
     'note': 'note',
   };
-
-  const successfulActionResult = { statusCode: 200 };
-  const failedActionResult = { statusCode: 400 };
 
   const fn = createTask;
 
@@ -56,5 +56,41 @@ describe('handler/createTask', () => {
 
     sinon.assert.match(result, failedActionResult);
     sinon.assert.calledOnce(createTaskServiceStub);
+  })
+})
+
+describe('handle/getAllTasks', () => {
+  let getAllTasksServiceStub;
+  beforeEach(() => {
+    getAllTasksServiceStub = sinon.stub(services, 'getAllTasks');
+  });
+  afterEach(() => {
+    getAllTasksServiceStub.restore();
+  });
+
+  const sample_successResponse = {
+    "5": {
+        "note": "Say Konichiwa UIT",
+        "userId": "user_00",
+        "isChecked": false,
+        "taskId": "krh0ns-Sw"
+    },
+    "success": true
+  };
+
+  const fn = getAllTasks
+
+  it('should throw error if getAllTasks failed', async () => {
+    getAllTasksServiceStub.throws(new Error('NetworkError'));
+
+    const result = await fn();
+    sinon.assert.match(result, failedActionResult);
+  })
+
+  it('should return success message if getAllTasks succeed', async () => {
+    getAllTasksServiceStub.returns(sample_successResponse);
+
+    const result = await fn();
+    sinon.assert.match(result, successfulActionResult)
   })
 })

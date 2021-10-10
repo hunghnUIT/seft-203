@@ -1,10 +1,5 @@
-const {
-  getAllTasks,
-  getTaskById,
-  findOneAndDeleteTaskById,
-  findOneAndUpdateTaskById
-} = require('./services');
 const services = require('./services');
+const asyncHandler = require('./middlewares/asyncHandler');
 
 const {
   generateSuccessResponse,
@@ -36,15 +31,19 @@ module.exports.createTask = async function (event, context) {
 }
 
 module.exports.getAllTasks = async function (event, context) {
-  const tasks = await getAllTasks();
-
-  return generateSuccessResponse(tasks);
+  try {
+    const tasks = await services.getAllTasks();
+  
+    return generateSuccessResponse(tasks);
+  } catch (err) {
+    return generateFailureResponse({ message: err.message });
+  }
 }
 
 module.exports.getTaskById = async function (event, context) {
   try {
     if (event?.pathParameters?.id) {
-      const task = await getTaskById(event.pathParameters.id);
+      const task = await services.getTaskById(event.pathParameters.id);
 
       if (task)
         return generateSuccessResponse(task);
@@ -69,7 +68,7 @@ module.exports.updateTaskById = async function (event, context) {
           note: proceedBody.note,
         })
 
-        const updateResult = await findOneAndUpdateTaskById(event.pathParameters.id, allowedToUpdateFields);
+        const updateResult = await services.findOneAndUpdateTaskById(event.pathParameters.id, allowedToUpdateFields);
 
         if (updateResult)
           return generateSuccessResponse(updateResult);
@@ -87,7 +86,7 @@ module.exports.updateTaskById = async function (event, context) {
 module.exports.deleteTaskById = async function (event, context) {
   try {
     if (event?.pathParameters?.id) {
-      const deleteResult = await findOneAndDeleteTaskById(event.pathParameters.id);
+      const deleteResult = await services.findOneAndDeleteTaskById(event.pathParameters.id);
 
       if (deleteResult)
         return generateSuccessResponse({});
@@ -109,5 +108,5 @@ module.exports.graphql = async function (event, context) {
 
       return generateFailureResponse(result);
     }
-    )
+  )
 }
