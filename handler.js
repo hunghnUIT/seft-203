@@ -36,7 +36,7 @@ module.exports.getAllTasks = async function (event, context) {
   
     return generateSuccessResponse(tasks);
   } catch (err) {
-    return generateFailureResponse({ message: err.message });
+    return generateFailureResponse({ message: err.message }, 500);
   }
 }
 
