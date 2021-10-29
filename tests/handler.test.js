@@ -1,8 +1,8 @@
 const sinon = require('sinon');
 const { beforeEach, afterEach } = require('mocha');
 
-const { createTask, getAllTasks, getTaskById, updateTaskById } = require('../handler');
-const services = require('../services');
+const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTaskById } = require('../handler');
+const { docClient } = require('../libs/dynamoDb');
 
 const successfulActionResult = { statusCode: 200 };
 const failedActionResult = { statusCode: 400 };
@@ -12,7 +12,7 @@ const internalErrorResult = { statusCode: 500 };
 describe('handler/createTask', () => {
   let createTaskServiceStub;
   beforeEach(() => {
-    createTaskServiceStub = sinon.stub(services, 'createTask');
+    createTaskServiceStub = sinon.stub(docClient, 'put');
   });
   afterEach(() => {
     createTaskServiceStub.restore();
@@ -39,7 +39,11 @@ describe('handler/createTask', () => {
   })
 
   it('should return success message if create task successfully', async () => {
-    createTaskServiceStub.returns(sample_taskBody);
+    createTaskServiceStub.callsFake(() => {
+      return {
+        promise: () => Promise.resolve({})
+      };
+    });
 
     const result = await fn({
       ...sample_event,
@@ -49,7 +53,11 @@ describe('handler/createTask', () => {
   })
 
   it('should throw error if service create new task failed', async () => {
-    createTaskServiceStub.throws(new Error('ValidateError'));
+    createTaskServiceStub.callsFake(() => {
+      return {
+        promise: () => Promise.reject(new Error('ValidateError'))
+      };
+    });
 
     const result = await fn({
       ...sample_event,
@@ -64,33 +72,40 @@ describe('handler/createTask', () => {
 describe('handle/getAllTasks', () => {
   let getAllTasksServiceStub;
   beforeEach(() => {
-    getAllTasksServiceStub = sinon.stub(services, 'getAllTasks');
+    getAllTasksServiceStub = sinon.stub(docClient, 'scan');
   });
   afterEach(() => {
     getAllTasksServiceStub.restore();
   });
 
-  const sample_successResponse = {
+  const sample_successResponse = [{
     "5": {
-        "note": "Say Konichiwa UIT",
-        "userId": "user_00",
-        "isChecked": false,
-        "taskId": "krh0ns-Sw"
-    },
-    "success": true
-  };
+      "note": "Say Konichiwa UIT",
+      "userId": "user_00",
+      "isChecked": false,
+      "taskId": "krh0ns-Sw"
+    }
+  }];
 
-  const fn = getAllTasks
+  const fn = getAllTasks;
 
   it('should throw error if getAllTasks failed', async () => {
-    getAllTasksServiceStub.throws(new Error('NetworkError'));
+    getAllTasksServiceStub.callsFake(function () {
+      return {
+        promise: () => Promise.reject(new Error('NetworkError'))
+      };
+    });
 
     const result = await fn();
     sinon.assert.match(result, internalErrorResult);
   })
 
   it('should return success message if getAllTasks succeed', async () => {
-    getAllTasksServiceStub.returns(sample_successResponse);
+    getAllTasksServiceStub.callsFake(() => {
+      return {
+        promise: () => Promise.resolve({ Items: sample_successResponse })
+      };
+    });
 
     const result = await fn();
     sinon.assert.match(result, successfulActionResult)
@@ -100,43 +115,48 @@ describe('handle/getAllTasks', () => {
 describe('handle/getTaskById', () => {
   let getTaskServiceStub;
   beforeEach(() => {
-    getTaskServiceStub = sinon.stub(services, 'getTaskById');
+    getTaskServiceStub = sinon.stub(docClient, 'get');
   });
   afterEach(() => {
     getTaskServiceStub.restore();
   });
-  
+
   const sample_validEvent = {
     pathParameters: {
       id: 'test',
     },
   };
   const sample_successResponse = {
-      "success": true,
-      "note": "Do UwU",
-      "userId": "user_00",
-      "isChecked": false,
-      "taskId": "-gNdsuDhO"
+    "note": "Do UwU",
+    "userId": "user_00",
+    "isChecked": false,
+    "taskId": "-gNdsuDhO"
   };
 
   const fn = getTaskById;
 
   it('should throw error if no body provided', async () => {
-    getTaskServiceStub.returns(null);
-
     const result = await fn({});
     sinon.assert.match(result, failedActionResult);
   })
 
-  it('should throw error if getAllTaskById not found', async () => {
-    getTaskServiceStub.returns(null);
+  it('should throw error if getTaskById not found', async () => {
+    getTaskServiceStub.callsFake(function () {
+      return {
+        promise: () => Promise.resolve({})
+      };
+    });
 
     const result = await fn(sample_validEvent);
     sinon.assert.match(result, notFoundResult);
   })
 
-  it('should return success message if getAllTasks succeed', async () => {
-    getTaskServiceStub.returns(sample_successResponse);
+  it('should return success message if getTaskById succeed', async () => {
+    getTaskServiceStub.callsFake(function () {
+      return {
+        promise: () => Promise.resolve({Item: sample_successResponse})
+      };
+    });
 
     const result = await fn(sample_validEvent);
     sinon.assert.match(result, successfulActionResult)
@@ -146,12 +166,12 @@ describe('handle/getTaskById', () => {
 describe('handle/updateTaskById', () => {
   let updateTaskServiceStub;
   beforeEach(() => {
-    updateTaskServiceStub = sinon.stub(services, 'findOneAndUpdateTaskById');
+    updateTaskServiceStub = sinon.stub(docClient, 'update');
   });
   afterEach(() => {
     updateTaskServiceStub.restore();
   });
-  
+
   const sample_validEvent = {
     pathParameters: {
       id: 'test',
@@ -165,11 +185,10 @@ describe('handle/updateTaskById', () => {
     body: '{}',
   };
   const sample_successResponse = {
-      "success": true,
-      "note": "Do UwU",
-      "userId": "user_00",
-      "isChecked": false,
-      "taskId": "-gNdsuDhO"
+    "note": "Do UwU",
+    "userId": "user_00",
+    "isChecked": false,
+    "taskId": "-gNdsuDhO"
   };
 
   const fn = updateTaskById;
@@ -185,14 +204,67 @@ describe('handle/updateTaskById', () => {
   })
 
   it('should throw error if findOneAndUpdateTaskById failed', async () => {
-    updateTaskServiceStub.throws(new Error('error'));
+    updateTaskServiceStub.callsFake(() => {
+      return {
+        promise: () => Promise.reject(new Error('error'))
+      }
+    });
 
-    const result = await fn(sample_onlyIdProvidedEvent);
+    const result = await fn(sample_validEvent);
     sinon.assert.match(result, failedActionResult);
   })
 
   it('should return success message if findOneAndUpdateTaskById succeed', async () => {
-    updateTaskServiceStub.returns(sample_successResponse);
+    updateTaskServiceStub.callsFake(() => {
+      return {
+        promise: () => Promise.resolve({Attributes: sample_successResponse})
+      }
+    });
+
+    const result = await fn(sample_validEvent);
+    sinon.assert.match(result, successfulActionResult)
+  })
+})
+
+describe('handle/deleteTaskById', () => {
+  let deleteTaskByIdServiceStub;
+  beforeEach(() => {
+    deleteTaskByIdServiceStub = sinon.stub(docClient, 'delete');
+  });
+
+  afterEach(() => {
+    deleteTaskByIdServiceStub.restore();
+  })
+
+  const sample_validEvent = {
+    pathParameters: {
+      id: 'test'
+    }
+  };
+  const fn = deleteTaskById;
+
+  it('should throw error if no body and ID are provided', async () => {
+    const result = await fn({});
+    sinon.assert.match(result, failedActionResult);
+  })
+
+  it('should throw error if findOneAndDeleteTaskById failed', async () => {
+    deleteTaskByIdServiceStub.callsFake(() => {
+      return {
+        promise: () => Promise.reject(new Error('error'))
+      }
+    });
+
+    const result = await fn(sample_validEvent);
+    sinon.assert.match(result, failedActionResult);
+  })
+
+  it('should return success message if findOneAndDeleteTaskById succeed', async () => {
+    deleteTaskByIdServiceStub.callsFake(() => {
+      return {
+        promise: () => Promise.resolve({})
+      }
+    });
 
     const result = await fn(sample_validEvent);
     sinon.assert.match(result, successfulActionResult)

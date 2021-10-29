@@ -121,8 +121,6 @@ exports.findOneAndDeleteTaskById = async (id) => {
       },
     };
     await docClient.delete(params).promise();
-
-    return true;
   } catch (error) {
     throw new Error(error.message);
   }
@@ -131,26 +129,26 @@ exports.findOneAndDeleteTaskById = async (id) => {
 
 // Demo function
 /**
- * @param {Number} timestamp 
- * @returns *array* of matching query items
- */
-const findTasksByCreateTime = async (timestamp) => {
-  try {
-    const params = {
-      TableName : TASKS_TABLE_NAME,
-      KeyConditionExpression: "#id >= :id",
-      ExpressionAttributeNames:{
-          "#id": "taskId"
-      },
-      ExpressionAttributeValues: {
-          ":id": timestamp
-      }
-    };
+//  * @param {Number} timestamp 
+//  * @returns *array* of matching query items
+//  */
+// const findTasksByCreateTime = async (timestamp) => {
+//   try {
+//     const params = {
+//       TableName : TASKS_TABLE_NAME,
+//       KeyConditionExpression: "#id >= :id",
+//       ExpressionAttributeNames:{
+//           "#id": "taskId"
+//       },
+//       ExpressionAttributeValues: {
+//           ":id": timestamp
+//       }
+//     };
 
-    const result = await docClient.query(params).promise();
+//     const result = await docClient.query(params).promise();
 
-    return result;
-  } catch (error) {
-    throw new Error(error.message);
-  }
-}
+//     return result;
+//   } catch (error) {
+//     throw new Error(error.message);
+//   }
+// }

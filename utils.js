@@ -4,10 +4,15 @@
  * @returns Response object in standard format
  * @updated 9/16/2021, `data` in responseBody change to `...data` to match with graphQL format
  */
-exports.generateSuccessResponse = (data, statusCode = 200) => {
+exports.generateSuccessResponse = (data, statusCode = 200, graphqlResponseType = false) => {
   let responseBody = {
     success: true,
-    ...data
+  }
+  if (graphqlResponseType) {
+    responseBody = { ...responseBody, ...data};
+  }
+  else {
+    responseBody.data = data;
   }
 
   return {
@@ -22,10 +27,15 @@ exports.generateSuccessResponse = (data, statusCode = 200) => {
  * @returns Response object in standard format
  * @updated 9/16/2021, `data` in responseBody change to .`..data` to match with graphQL format
  */
-exports.generateFailureResponse = (data, statusCode = 400) => {
-  const responseBody = {
+exports.generateFailureResponse = (data, statusCode = 400, graphqlResponseType = false) => {
+  let responseBody = {
     success: false,
-    ...data
+  }
+  if (graphqlResponseType) {
+    responseBody = { ...responseBody, ...data};
+  }
+  else {
+    responseBody.data = data;
   }
 
   return {

@@ -3,3 +3,5 @@ node_modules/
 temp
 temp.js
 event.json
+.nyc_output/
+coverage/

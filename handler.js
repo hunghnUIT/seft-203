@@ -86,12 +86,9 @@ module.exports.updateTaskById = async function (event, context) {
 module.exports.deleteTaskById = async function (event, context) {
   try {
     if (event?.pathParameters?.id) {
-      const deleteResult = await services.findOneAndDeleteTaskById(event.pathParameters.id);
-
-      if (deleteResult)
-        return generateSuccessResponse({});
-      else
-        return generateFailureResponse({ message: 'Not found' }, 404);
+      // DynamoDB always execute delete and return {} even that the record not in DB
+      await services.findOneAndDeleteTaskById(event.pathParameters.id);
+      return generateSuccessResponse({});
     }
 
     return generateFailureResponse({ message: 'Not enough param' });
@@ -104,9 +101,9 @@ module.exports.graphql = async function (event, context) {
   return graphql.graphql(graphQLSchema, event.body)
     .then(result => {
       if (result.hasOwnProperty('data'))
-        return generateSuccessResponse(result);
+        return generateSuccessResponse(result, 200, true);
 
-      return generateFailureResponse(result);
+      return generateFailureResponse(result, 400, true);
     }
   )
 }
