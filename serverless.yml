@@ -68,19 +68,19 @@ functions:
 #       Type: AWS::DynamoDB::Table
 #       Properties:
 #         AttributeDefinitions:
-#           - AttributeName: userId
+#           - AttributeName: pk
 #             AttributeType: S
-#           - AttributeName: taskId
+#           - AttributeName: sk
 #             AttributeType: S
 #         KeySchema:
-#           - AttributeName: userId
+#           - AttributeName: pk
 #             KeyType: HASH
-#           - AttributeName: taskId
+#           - AttributeName: sk
 #             KeyType: RANGE
 #         ProvisionedThroughput:
 #           ReadCapacityUnits: 1
 #           WriteCapacityUnits: 1
-#         TableName: Tasks
+#         TableName: Megatable
 
 plugins:
   - serverless-offline

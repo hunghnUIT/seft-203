@@ -1,4 +1,4 @@
-const services = require('./services');
+const services = require('./services/taskService');
 const asyncHandler = require('./middlewares/asyncHandler');
 
 const {
@@ -33,7 +33,7 @@ module.exports.createTask = async function (event, context) {
 module.exports.getAllTasks = async function (event, context) {
   try {
     const tasks = await services.getAllTasks();
-  
+
     return generateSuccessResponse(tasks);
   } catch (err) {
     return generateFailureResponse({ message: err.message }, 500);
@@ -104,6 +104,41 @@ module.exports.graphql = async function (event, context) {
         return generateSuccessResponse(result, 200, true);
 
       return generateFailureResponse(result, 400, true);
-    }
-  )
+    })
+}
+
+module.exports.register = async function (event, context) {
+  const { name, email, password } = event.body;
+
+  // const checkUserExist = await User.findOne({ email: email, isVerified: true, isAdmin: false });
+
+  if (checkUserExist)
+    return generateFailureResponse({ message: 'User already exists'}, 422);
+
+  // User.findOne({ email: email }, async (err, user) => {
+  //   if (err) {
+  //     console.log(err);
+  //     return next(new ErrorResponse(err.message), err.code || 500);
+  //   }
+
+  //   if (user) {
+  //     user.name = name;
+  //     user.password = password || ""; // Add default value for showing error for password
+
+  //     await user.save().catch(err => next(new ErrorResponse(err.message)));
+  //   }
+  //   else
+  //     user = await User.create({ email, name, password }).catch(err => next(new ErrorResponse(err.message)));
+
+  //   if (user) {
+  //     const requestVerify = await requestVerifyEmail(req, email).catch(err => next(new ErrorResponse(err.message, err.code)));
+  //     if (requestVerify)
+  //       return res.status(200).json({
+  //         success: true,
+  //         message: 'Waiting for the verification of email'
+  //       });
+  //   }
+  //   else
+  //     return next(new ErrorResponse('Can not create user'));
+  // });
 }

@@ -13,7 +13,7 @@ const {
   getTaskById,
   findOneAndDeleteTaskById,
   findOneAndUpdateTaskById
-} = require('../services');
+} = require('../services/taskService');
 
 const TaskType = require('../schemas/TaskType');
 

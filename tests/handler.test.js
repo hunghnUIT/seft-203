@@ -69,7 +69,7 @@ describe('handler/createTask', () => {
   })
 })
 
-describe('handle/getAllTasks', () => {
+describe('handler/getAllTasks', () => {
   let getAllTasksServiceStub;
   beforeEach(() => {
     getAllTasksServiceStub = sinon.stub(docClient, 'scan');
@@ -112,7 +112,7 @@ describe('handle/getAllTasks', () => {
   })
 })
 
-describe('handle/getTaskById', () => {
+describe('handler/getTaskById', () => {
   let getTaskServiceStub;
   beforeEach(() => {
     getTaskServiceStub = sinon.stub(docClient, 'get');
@@ -163,7 +163,7 @@ describe('handle/getTaskById', () => {
   })
 })
 
-describe('handle/updateTaskById', () => {
+describe('handler/updateTaskById', () => {
   let updateTaskServiceStub;
   beforeEach(() => {
     updateTaskServiceStub = sinon.stub(docClient, 'update');
@@ -226,7 +226,7 @@ describe('handle/updateTaskById', () => {
   })
 })
 
-describe('handle/deleteTaskById', () => {
+describe('handler/deleteTaskById', () => {
   let deleteTaskByIdServiceStub;
   beforeEach(() => {
     deleteTaskByIdServiceStub = sinon.stub(docClient, 'delete');

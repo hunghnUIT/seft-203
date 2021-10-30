@@ -1,13 +1,10 @@
 const shortid = require('shortid');
 const {
   docClient
-} = require('./libs/dynamoDb');
-const { USER_ID, TASKS_TABLE_NAME } = require('./settings');
-const { generateUpdateExpression, generateUpdateExpressionAttributeValues } = require('./utils');
+} = require('../libs/dynamoDb');
+const { USER_ID, TABLE_NAME } = require('../settings');
+const { generateUpdateExpression, generateUpdateExpressionAttributeValues } = require('../utils');
 
-const params = {
-  TableName: TASKS_TABLE_NAME,
-};
 
 
 /**
@@ -16,6 +13,9 @@ const params = {
 exports.getAllTasks = async () => {
   const scanResults = [];
   let items = null;
+  const params = {
+    TableName: TABLE_NAME,
+  };
 
   do {
     items = await docClient.scan(params).promise();
@@ -37,7 +37,7 @@ exports.createTask = async (note) => {
     const newTaskId = shortid.generate();
 
     const params = {
-      TableName: TASKS_TABLE_NAME,
+      TableName: TABLE_NAME,
       Item: {
         'userId': USER_ID,
         'taskId': newTaskId,
@@ -66,7 +66,7 @@ exports.createTask = async (note) => {
 exports.getTaskById = async (id) => {
   try {
     const params = {
-      TableName: TASKS_TABLE_NAME,
+      TableName: TABLE_NAME,
       Key: {
         'userId': USER_ID,
         'taskId': id,
@@ -90,7 +90,7 @@ exports.findOneAndUpdateTaskById = async (id, newData) => {
     const expressionAttributeValues = generateUpdateExpressionAttributeValues(newData);
 
     const params = {
-      TableName: TASKS_TABLE_NAME,
+      TableName: TABLE_NAME,
       Key: {
         'userId': USER_ID,
         'taskId': id,
@@ -114,7 +114,7 @@ exports.findOneAndUpdateTaskById = async (id, newData) => {
 exports.findOneAndDeleteTaskById = async (id) => {
   try {
     const params = {
-      TableName: TASKS_TABLE_NAME,
+      TableName: TABLE_NAME,
       Key: {
         'userId': USER_ID,
         'taskId': id,
@@ -135,7 +135,7 @@ exports.findOneAndDeleteTaskById = async (id) => {
 // const findTasksByCreateTime = async (timestamp) => {
 //   try {
 //     const params = {
-//       TableName : TASKS_TABLE_NAME,
+//       TableName : TABLE_NAME,
 //       KeyConditionExpression: "#id >= :id",
 //       ExpressionAttributeNames:{
 //           "#id": "taskId"
