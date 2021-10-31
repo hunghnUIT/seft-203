@@ -2,30 +2,34 @@ const shortid = require('shortid');
 const {
   docClient
 } = require('../libs/dynamoDb');
-const { USER_ID, TABLE_NAME } = require('../settings');
+const { PK_VALUE, TABLE_NAME, USER_ID } = require('../settings');
 const { generateUpdateExpression, generateUpdateExpressionAttributeValues } = require('../utils');
-
+const { generateTaskSk } = require('../utils');
 
 
 /**
  * @returns return all tasks in *array* type
  */
 exports.getAllTasks = async () => {
-  const scanResults = [];
+  let queryResults = [];
   let items = null;
   const params = {
     TableName: TABLE_NAME,
+    KeyConditionExpression: 'pk = :pk',
+    ExpressionAttributeValues: {
+      ':pk': PK_VALUE.task,
+    }
   };
 
   do {
-    items = await docClient.scan(params).promise();
-    items.Items.forEach((item) => scanResults.push(item));
+    items = await docClient.query(params).promise();
+    queryResults = queryResults.concat(items.Items);
 
     params.ExclusiveStartKey = items.LastEvaluatedKey;
   }
   while (items.LastEvaluatedKey);
 
-  return scanResults;
+  return queryResults;
 }
 
 /**
@@ -35,12 +39,13 @@ exports.getAllTasks = async () => {
 exports.createTask = async (note) => {
   try {
     const newTaskId = shortid.generate();
+    const sk = generateTaskSk(USER_ID, newTaskId);
 
     const params = {
       TableName: TABLE_NAME,
       Item: {
-        'userId': USER_ID,
-        'taskId': newTaskId,
+        'pk': PK_VALUE.task,
+        'sk': sk,
         'isChecked': false,
         'note': note,
       },
@@ -49,8 +54,8 @@ exports.createTask = async (note) => {
     await docClient.put(params).promise();
 
     return {
-      'userId': USER_ID,
-      'taskId': newTaskId,
+      'pk': PK_VALUE.task,
+      'sk': sk,
       'isChecked': false,
       'note': note,
     };
@@ -65,11 +70,12 @@ exports.createTask = async (note) => {
  */
 exports.getTaskById = async (id) => {
   try {
+    const sk = generateTaskSk(USER_ID, id);
     const params = {
       TableName: TABLE_NAME,
       Key: {
-        'userId': USER_ID,
-        'taskId': id,
+        'pk': PK_VALUE.task,
+        'sk': sk,
       },
     };
     const foundItem = await docClient.get(params).promise();
@@ -86,14 +92,15 @@ exports.getTaskById = async (id) => {
  */
 exports.findOneAndUpdateTaskById = async (id, newData) => {
   try {
+    const sk = generateTaskSk(USER_ID, id);
     const updateExpression = generateUpdateExpression(newData);
     const expressionAttributeValues = generateUpdateExpressionAttributeValues(newData);
 
     const params = {
       TableName: TABLE_NAME,
       Key: {
-        'userId': USER_ID,
-        'taskId': id,
+        'pk': PK_VALUE.task,
+        'sk': sk,
       },
       UpdateExpression: updateExpression,
       ExpressionAttributeValues: expressionAttributeValues,
@@ -113,11 +120,12 @@ exports.findOneAndUpdateTaskById = async (id, newData) => {
  */
 exports.findOneAndDeleteTaskById = async (id) => {
   try {
+    const sk = generateTaskSk(USER_ID, id);
     const params = {
       TableName: TABLE_NAME,
       Key: {
-        'userId': USER_ID,
-        'taskId': id,
+        'pk': PK_VALUE.task,
+        'sk': sk,
       },
     };
     await docClient.delete(params).promise();

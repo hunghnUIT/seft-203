@@ -21,12 +21,6 @@ describe('handler/createTask', () => {
   const sample_validBody = `{ "note": "testing create new task" }`;
   const sample_nullBody = null;
   const sample_event = {};
-  const sample_taskBody = {
-    'userId': 'user_00',
-    'taskId': 'op24-m',
-    'isChecked': false,
-    'note': 'note',
-  };
 
   const fn = createTask;
 
@@ -64,7 +58,7 @@ describe('handler/createTask', () => {
       body: sample_validBody,
     });
 
-    sinon.assert.match(result, failedActionResult);
+    sinon.assert.match(result, internalErrorResult);
     sinon.assert.calledOnce(createTaskServiceStub);
   })
 })
@@ -72,7 +66,7 @@ describe('handler/createTask', () => {
 describe('handler/getAllTasks', () => {
   let getAllTasksServiceStub;
   beforeEach(() => {
-    getAllTasksServiceStub = sinon.stub(docClient, 'scan');
+    getAllTasksServiceStub = sinon.stub(docClient, 'query');
   });
   afterEach(() => {
     getAllTasksServiceStub.restore();
@@ -140,7 +134,7 @@ describe('handler/getTaskById', () => {
     sinon.assert.match(result, failedActionResult);
   })
 
-  it('should throw error if getTaskById not found', async () => {
+  it('should response code 404 if getTaskById not found', async () => {
     getTaskServiceStub.callsFake(function () {
       return {
         promise: () => Promise.resolve({})
@@ -149,6 +143,17 @@ describe('handler/getTaskById', () => {
 
     const result = await fn(sample_validEvent);
     sinon.assert.match(result, notFoundResult);
+  })
+
+  it('should return code 500 if getTaskById got error', async () => {
+    getTaskServiceStub.callsFake(function () {
+      return {
+        promise: () => Promise.reject(new Error('InternalError'))
+      };
+    });
+
+    const result = await fn(sample_validEvent);
+    sinon.assert.match(result, internalErrorResult);
   })
 
   it('should return success message if getTaskById succeed', async () => {
@@ -211,7 +216,7 @@ describe('handler/updateTaskById', () => {
     });
 
     const result = await fn(sample_validEvent);
-    sinon.assert.match(result, failedActionResult);
+    sinon.assert.match(result, internalErrorResult);
   })
 
   it('should return success message if findOneAndUpdateTaskById succeed', async () => {
@@ -256,7 +261,7 @@ describe('handler/deleteTaskById', () => {
     });
 
     const result = await fn(sample_validEvent);
-    sinon.assert.match(result, failedActionResult);
+    sinon.assert.match(result, internalErrorResult);
   })
 
   it('should return success message if findOneAndDeleteTaskById succeed', async () => {

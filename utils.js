@@ -1,3 +1,5 @@
+const { SK_PATTERN_VALUE } = require('./settings')
+
 /**
  * @param {Object} data returning data in *object* type
  * @param {Number} statusCode status code, *default is 200*
@@ -84,3 +86,10 @@ exports.generateUpdateExpressionAttributeValues = (data) => {
 
   return result;
 }
+
+exports.generateTaskSk = (userId, taskId) => {
+  let sk = SK_PATTERN_VALUE.task;
+  sk = sk.replace('${userId}', userId);
+  sk = sk.replace('${taskId}', taskId);
+  return sk;
+};

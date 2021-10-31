@@ -26,7 +26,7 @@ module.exports.createTask = async function (event, context) {
 
     return generateFailureResponse({ message: 'Task\'s note is required' });
   } catch (err) {
-    return generateFailureResponse({ message: err.message })
+    return generateFailureResponse({ message: err.message }, 500)
   }
 }
 
@@ -53,7 +53,7 @@ module.exports.getTaskById = async function (event, context) {
 
     return generateFailureResponse({ message: 'Not enough param' });
   } catch (err) {
-    return generateFailureResponse({ message: err.message });
+    return generateFailureResponse({ message: err.message }, 500);
   }
 }
 
@@ -70,16 +70,15 @@ module.exports.updateTaskById = async function (event, context) {
 
         const updateResult = await services.findOneAndUpdateTaskById(event.pathParameters.id, allowedToUpdateFields);
 
-        if (updateResult)
-          return generateSuccessResponse(updateResult);
-        else
-          return generateFailureResponse({ message: 'Not found' }, 404);
+        return generateSuccessResponse(updateResult);
+        // Should I find task before update to identify does task exist
+        // that help avoiding create a new task when update not exist task?
       }
     }
 
     return generateFailureResponse({ message: 'Not enough param and/or update body' });
   } catch (err) {
-    return generateFailureResponse({ message: err.message });
+    return generateFailureResponse({ message: err.message }, 500);
   }
 }
 
@@ -93,7 +92,7 @@ module.exports.deleteTaskById = async function (event, context) {
 
     return generateFailureResponse({ message: 'Not enough param' });
   } catch (err) {
-    return generateFailureResponse({ message: err.message });
+    return generateFailureResponse({ message: err.message }, 500);
   }
 }
 
