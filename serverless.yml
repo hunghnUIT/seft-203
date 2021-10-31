@@ -61,6 +61,20 @@ functions:
       - http:
           path: /graphql
           method: post
+  createUser:
+    handler: 
+      handler.createUser
+    events:
+      - http:
+          path: /users
+          method: post
+  getUserByEmail:
+    handler: 
+      handler.getUserByEmail
+    events:
+      - http:
+          path: /users/{userEmail}
+          method: get
 
 resources:
   Resources:

@@ -87,9 +87,23 @@ exports.generateUpdateExpressionAttributeValues = (data) => {
   return result;
 }
 
-exports.generateTaskSk = (userId, taskId) => {
+/**
+ * @param {String} userEmail userEmail
+ * @param {String} taskId taskId, if ***no taskId provided***, taskId in SK will be replaced with ***empty string***
+ * @returns SK string corresponding to sk for task
+ */
+exports.generateTaskSk = (userEmail, taskId) => {
   let sk = SK_PATTERN_VALUE.task;
-  sk = sk.replace('${userId}', userId);
-  sk = sk.replace('${taskId}', taskId);
+  sk = sk.replace('${userEmail}', userEmail);
+  if (taskId)
+    sk = sk.replace('${taskId}', taskId);
+  else
+    sk = sk.replace('${taskId}', '');
+  return sk;
+};
+
+exports.generateUserSk = (userEmail) => {
+  let sk = SK_PATTERN_VALUE.user;
+  sk = sk.replace('${userEmail}', userEmail);
   return sk;
 };

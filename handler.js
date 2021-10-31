@@ -1,5 +1,7 @@
-const services = require('./services/taskService');
+const taskServices = require('./services/taskService');
+const userServices = require('./services/userService');
 const asyncHandler = require('./middlewares/asyncHandler');
+const assert = require('assert');
 
 const {
   generateSuccessResponse,
@@ -18,7 +20,7 @@ module.exports.createTask = async function (event, context) {
       const proceedBody = JSON.parse(event.body);
 
       if (isNotEmptyObj(proceedBody)) {
-        const newTask = await services.createTask(proceedBody.note);
+        const newTask = await taskServices.createTask(proceedBody.note);
 
         return generateSuccessResponse(newTask);
       }
@@ -32,7 +34,7 @@ module.exports.createTask = async function (event, context) {
 
 module.exports.getAllTasks = async function (event, context) {
   try {
-    const tasks = await services.getAllTasks();
+    const tasks = await taskServices.getAllTasks();
 
     return generateSuccessResponse(tasks);
   } catch (err) {
@@ -43,7 +45,7 @@ module.exports.getAllTasks = async function (event, context) {
 module.exports.getTaskById = async function (event, context) {
   try {
     if (event?.pathParameters?.id) {
-      const task = await services.getTaskById(event.pathParameters.id);
+      const task = await taskServices.getTaskById(event.pathParameters.id);
 
       if (task)
         return generateSuccessResponse(task);
@@ -68,7 +70,7 @@ module.exports.updateTaskById = async function (event, context) {
           note: proceedBody.note,
         })
 
-        const updateResult = await services.findOneAndUpdateTaskById(event.pathParameters.id, allowedToUpdateFields);
+        const updateResult = await taskServices.findOneAndUpdateTaskById(event.pathParameters.id, allowedToUpdateFields);
 
         return generateSuccessResponse(updateResult);
         // Should I find task before update to identify does task exist
@@ -86,7 +88,7 @@ module.exports.deleteTaskById = async function (event, context) {
   try {
     if (event?.pathParameters?.id) {
       // DynamoDB always execute delete and return {} even that the record not in DB
-      await services.findOneAndDeleteTaskById(event.pathParameters.id);
+      await taskServices.findOneAndDeleteTaskById(event.pathParameters.id);
       return generateSuccessResponse({});
     }
 
@@ -141,3 +143,37 @@ module.exports.register = async function (event, context) {
   //     return next(new ErrorResponse('Can not create user'));
   // });
 }
+
+module.exports.getUserByEmail = async (event, context) => {
+  try {
+    if (event.pathParameters?.userEmail) {
+      const result = await userServices.getUserByEmail(event.pathParameters.userEmail);
+      return generateSuccessResponse(result);
+    }
+
+    return generateFailureResponse({ message: 'Not enough params' });
+  } catch (err) {
+    return generateFailureResponse({ message: err.message }, 500);
+  }
+};
+
+module.exports.createUser = async (event, context) => {
+  try {
+    if (event.body) {
+      const proceedBody = JSON.parse(event.body);
+      assert(proceedBody.email, 'email is required');
+      assert(proceedBody.password, 'password is required');
+      assert(proceedBody.name, 'name is required');
+
+      if (isNotEmptyObj(proceedBody)) {
+        const newUser = await userServices.createUser(proceedBody);
+
+        return generateSuccessResponse(newUser);
+      }
+    }
+
+    return generateFailureResponse({ message: 'Event body is required' });
+  } catch (err) {
+    return generateFailureResponse({ message: err.message }, 500)
+  }
+};
