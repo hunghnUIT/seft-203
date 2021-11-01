@@ -24,8 +24,8 @@ exports.createUser = async (user) => {
   try {
     const { email, password, name } = user;
     const newUser = await new User({ email, password, name});
-    const createdUser = await newUser.saveToDb();
-    return createdUser;
+    await newUser.saveToDb();
+    return newUser;
   } catch (error) {
     throw new Error(error.message);
   }

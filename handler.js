@@ -109,12 +109,28 @@ module.exports.graphql = async function (event, context) {
 }
 
 module.exports.register = async function (event, context) {
-  const { name, email, password } = event.body;
+  try {
+    if (event.body) {
+      const proceedBody = JSON.parse(event.body);
+      const { name, email, password } = proceedBody;
+      assert(email, 'email is required');
+      assert(password, 'password is required');
+      assert(name, 'name is required');
 
-  // const checkUserExist = await User.findOne({ email: email, isVerified: true, isAdmin: false });
+      const checkUserExist = await userServices.getUserByEmail(email);
+      if (checkUserExist && checkUserExist.isVerified)
+        return generateFailureResponse({ message: 'User already exists' }, 422);
 
-  if (checkUserExist)
-    return generateFailureResponse({ message: 'User already exists'}, 422);
+      const newUser = await userServices.createUser(proceedBody);
+      await newUser.sendVerifyEmail(event);
+
+      return generateSuccessResponse({ message: 'Waiting for email verification' }, 201);
+    }
+
+    return generateFailureResponse({ message: 'Event body is required' });
+  } catch (err) {
+    return generateFailureResponse({ message: err.message }, 500)
+  }
 
   // User.findOne({ email: email }, async (err, user) => {
   //   if (err) {
