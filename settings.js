@@ -13,3 +13,5 @@ exports.SK_PATTERN_VALUE = {
   task: 'task_info::${userEmail}::${taskId}',
   user: 'user_info::${userEmail}',
 };
+
+exports.JWT_EXPIRE = '60d'

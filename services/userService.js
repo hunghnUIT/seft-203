@@ -1,9 +1,11 @@
+const jwt = require('jsonwebtoken');
+
 const { docClient } = require('../libs/dynamoDb');
 const { TABLE_NAME, PK_VALUE } = require('../settings');
 const User = require('../models/User');
 const { generateUserSk } = require('../utils');
 
-exports.getUserByEmail = async (userEmail) => {
+exports.getUserByEmail = async (userEmail, includePassword = false) => {
   try {
     const sk = generateUserSk(userEmail);
     const params = {
@@ -13,20 +15,40 @@ exports.getUserByEmail = async (userEmail) => {
         'sk': sk,
       },
     };
-    const user = await docClient.get(params).promise();
-    return user.Item
+    const queryResult = await docClient.get(params).promise();
+    const userData = queryResult.Item;
+    if (userData) {
+      const user = await new User({ ...userData });
+      if(!includePassword) {
+        delete user.password;
+      }
+      return user;
+    }
+    return null;
   } catch (error) {
     throw new Error(error.message);
   }
 };
 
-exports.createUser = async (user) => {
+exports.checkVerifyEmailToken = async (token) => {
   try {
-    const { email, password, name } = user;
-    const newUser = await new User({ email, password, name});
-    await newUser.saveToDb();
-    return newUser;
+    const decoded = jwt.verify(token, process.env['JWT_SECRET']);
+    // Get password unless password will be overwritten to undefined due to saveToDb func
+    const user = await this.getUserByEmail(decoded.email, true);
+
+    // Not found token or token expires
+    if (!user) {
+      throw new Error('Invalid or expired token');
+    }
+
+    user.setVerifiedEmail();
+    await user.saveToDb();
+
+    return user;
   } catch (error) {
-    throw new Error(error.message);
+    if (error.message === 'invalid signature')
+      throw new Error('Invalid or expired token');
+    else
+      throw new Error(error.message);
   }
 };

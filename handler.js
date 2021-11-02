@@ -1,6 +1,5 @@
 const taskServices = require('./services/taskService');
 const userServices = require('./services/userService');
-const asyncHandler = require('./middlewares/asyncHandler');
 const assert = require('assert');
 
 const {
@@ -131,34 +130,36 @@ module.exports.register = async function (event, context) {
   } catch (err) {
     return generateFailureResponse({ message: err.message }, 500)
   }
+};
 
-  // User.findOne({ email: email }, async (err, user) => {
-  //   if (err) {
-  //     console.log(err);
-  //     return next(new ErrorResponse(err.message), err.code || 500);
-  //   }
-
-  //   if (user) {
-  //     user.name = name;
-  //     user.password = password || ""; // Add default value for showing error for password
-
-  //     await user.save().catch(err => next(new ErrorResponse(err.message)));
-  //   }
-  //   else
-  //     user = await User.create({ email, name, password }).catch(err => next(new ErrorResponse(err.message)));
-
-  //   if (user) {
-  //     const requestVerify = await requestVerifyEmail(req, email).catch(err => next(new ErrorResponse(err.message, err.code)));
-  //     if (requestVerify)
-  //       return res.status(200).json({
-  //         success: true,
-  //         message: 'Waiting for the verification of email'
-  //       });
-  //   }
-  //   else
-  //     return next(new ErrorResponse('Can not create user'));
-  // });
-}
+module.exports.verifyEmail = async function(event, context) {
+  try {
+    if (event.pathParameters.token) {
+      const verifiedUser = await userServices.checkVerifyEmailToken(event.pathParameters.token);
+      return {
+        statusCode: 200,
+        "headers": {
+          'Content-Type': 'text/html',
+        },
+        body: `
+          <html>
+            <body>
+              <span style="width: 100%; text-align: center;">
+                <h3>
+                  <span style="color:green; font-size:2rem">&#127881;</span>
+                      Congratulations
+                  <span style="color:green; font-size:2rem">&#127881;</span>
+                </h3>
+                <h3>Your email address <a style="text-decoration: none;" href="mailto:${verifiedUser.email}">${verifiedUser.email}</a> has been verified.</h3>
+              </span>
+            </body>
+          </html>`,
+      }
+    }
+  } catch (err) {
+    return generateFailureResponse({ message: err.message }, 400)
+  }
+};
 
 module.exports.getUserByEmail = async (event, context) => {
   try {
@@ -173,23 +174,29 @@ module.exports.getUserByEmail = async (event, context) => {
   }
 };
 
-module.exports.createUser = async (event, context) => {
+module.exports.login = async (event, context) => {
   try {
     if (event.body) {
       const proceedBody = JSON.parse(event.body);
-      assert(proceedBody.email, 'email is required');
-      assert(proceedBody.password, 'password is required');
-      assert(proceedBody.name, 'name is required');
+      const { email, password } = proceedBody;
+      assert(email, 'email is required');
+      assert(password, 'password is required');
 
-      if (isNotEmptyObj(proceedBody)) {
-        const newUser = await userServices.createUser(proceedBody);
+      const user = await userServices.getUserByEmail(email, true);
+      if (!user)
+        return generateFailureResponse({ message: 'Invalid credentials' }, 401);
+      if (!user.isVerified)
+        return generateFailureResponse({ message: 'Please verify your email first' }, 422);
 
-        return generateSuccessResponse(newUser);
-      }
+      const isMatchPassword = await user.matchPassword(password);
+      if (!isMatchPassword)
+        return generateFailureResponse({ message: 'Invalid credentials' }, 401);
+
+      const token = user.getAccessToken();
+      return generateSuccessResponse({ accessToken: token }, 200);
     }
-
-    return generateFailureResponse({ message: 'Event body is required' });
+    return generateFailureResponse({ message: 'Email and password are required' });
   } catch (err) {
-    return generateFailureResponse({ message: err.message }, 500)
+    return generateFailureResponse({ message: err.message }, 500);
   }
 };

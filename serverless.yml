@@ -61,12 +61,26 @@ functions:
       - http:
           path: /graphql
           method: post
-  createUser:
+  register:
     handler: 
-      handler.createUser
+      handler.register
     events:
       - http:
-          path: /users
+          path: /register
+          method: post
+  verifyEmail:
+    handler: 
+      handler.verifyEmail
+    events:
+      - http:
+          path: /register/verify/{token}
+          method: get
+  login:
+    handler: 
+      handler.login
+    events:
+      - http:
+          path: /login
           method: post
   getUserByEmail:
     handler: 

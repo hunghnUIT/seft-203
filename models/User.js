@@ -5,14 +5,16 @@ const { docClient } = require('../libs/dynamoDb');
 const { TABLE_NAME, PK_VALUE } = require('../settings');
 const { generateUserSk } = require('../utils');
 const sendMail = require('../services/mailService');
+const { JWT_EXPIRE } = require('../settings');
 
 
 class User {
-  constructor({email, password, name}) {
+  constructor({email, password, name, isVerified}) {
     return (async () => {
       this.email = email;
       this.name = name;
-      this.password = await this.encryptPassword(password);
+      this.password = password;
+      this.isVerified = isVerified;
       return this;
     })();
   }
@@ -24,7 +26,7 @@ class User {
   }
 
   getAccessToken() {
-    return jwt.sign({id: this.email} , process.env['JWT_SECRET'], {
+    return jwt.sign({email: this.email} , process.env['JWT_SECRET'], {
         expiresIn: settings.JWT_EXPIRE
     })
   }
@@ -33,7 +35,10 @@ class User {
       return await bcrypt.compare(enteredPassword, this.password);
   }
 
-  async saveToDb() {
+  async saveToDb(willEncryptPassword = false) {
+    if (willEncryptPassword)
+      this.password = await this.encryptPassword(this.password);
+
     const sk = generateUserSk(this.email);
     const item = {
       'pk': PK_VALUE.user,
@@ -41,7 +46,7 @@ class User {
       email: this.email,
       password: this.password,
       name: this.name,
-      isVerified: false
+      isVerified: this.isVerified ?? false
     }
     const params = {
       TableName: TABLE_NAME,
@@ -53,14 +58,14 @@ class User {
   };
 
   getVerifyEmailToken() {
-    return jwt.sign({id: this.email} , process.env['JWT_SECRET'], {
+    return jwt.sign({email: this.email} , process.env['JWT_SECRET'], {
       expiresIn: '1d'
     })
   };
 
   async sendVerifyEmail(event) {
-    const host = event['headers']['Host'] = '******.execute-api.eu-west-1.amazonaws.com'
-    const stage = event['requestContext']['stage'] = 'test'
+    const host = event['headers']['Host'];
+    const stage = event['requestContext']['stage'];
     const verifyToken = this.getVerifyEmailToken();
     const verifyURL = `https://${host}/${stage}/register/verify/${verifyToken}`
     const message = `You are receiving this email because you (or someone else) has requested the verification of email. Click at the link below to verify the email if that person was you: \n\n ${verifyURL}`
@@ -77,6 +82,16 @@ class User {
       throw new ErrorResponse('Email could not be sent', 500);
     }
     return success;
+  };
+
+  setVerifiedEmail() {
+    this.isVerified = true;
+  };
+
+  getAccessToken() {
+    return jwt.sign({email: this.email} , process.env['JWT_SECRET'], {
+      expiresIn: JWT_EXPIRE
+    });
   };
 };
 
