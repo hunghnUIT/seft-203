@@ -66,21 +66,21 @@ functions:
       handler.register
     events:
       - http:
-          path: /register
+          path: auth/register
           method: post
   verifyEmail:
     handler: 
       handler.verifyEmail
     events:
       - http:
-          path: /register/verify/{token}
+          path: auth/register/verify/{token}
           method: get
   login:
     handler: 
       handler.login
     events:
       - http:
-          path: /login
+          path: auth/login
           method: post
   getUserByEmail:
     handler: 
@@ -89,6 +89,10 @@ functions:
       - http:
           path: /users/{userEmail}
           method: get
+          cors: true
+          authorizer: authorize
+  authorize:
+    handler: authorizer.authorize
 
 resources:
   Resources:
