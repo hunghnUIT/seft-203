@@ -30,6 +30,17 @@ exports.getUserByEmail = async (userEmail, includePassword = false) => {
   }
 };
 
+exports.createUser = async (user) => {
+  try {
+    const { email, password, name } = user;
+    const newUser = await new User({ email, password, name});
+    await newUser.saveToDb(true);
+    return newUser;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
 exports.checkVerifyEmailToken = async (token) => {
   try {
     const decoded = jwt.verify(token, process.env['JWT_SECRET']);
