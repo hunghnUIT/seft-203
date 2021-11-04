@@ -17,7 +17,9 @@ module.exports.authorize = async (event, context, callback) => {
   if (decoded && decoded.email) {
     const user = await getUserByEmail(decoded.email);
     if (user)
-      return callback(null, generateAuthResponse(decoded.email, 'Allow', methodArn));
+      return callback(null, generateAuthResponse(decoded.email, 'Allow', methodArn, {
+        userEmail: user.email,
+      }));
   }
   return callback(null, generateAuthResponse(decoded.email, 'Deny', methodArn));
 };

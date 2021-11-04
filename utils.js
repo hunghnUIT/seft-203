@@ -108,12 +108,13 @@ exports.generateUserSk = (userEmail) => {
   return sk;
 };
 
-exports.generateAuthResponse = (principalId, effect, methodArn) => {
+exports.generateAuthResponse = (principalId, effect, methodArn, context) => {
   const policyDocument = generatePolicyDocument(effect, methodArn);
 
   return {
     principalId,
-    policyDocument
+    policyDocument,
+    context
   };
 }
 

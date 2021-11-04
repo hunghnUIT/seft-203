@@ -2,7 +2,7 @@ const shortid = require('shortid');
 const {
   docClient
 } = require('../libs/dynamoDb');
-const { PK_VALUE, TABLE_NAME, USER_ID } = require('../settings');
+const { PK_VALUE, TABLE_NAME } = require('../settings');
 const { generateUpdateExpression, generateUpdateExpressionAttributeValues } = require('../utils');
 const { generateTaskSk } = require('../utils');
 
@@ -10,14 +10,16 @@ const { generateTaskSk } = require('../utils');
 /**
  * @returns return all tasks in *array* type
  */
-exports.getAllTasks = async () => {
+exports.getAllTasks = async (userEmail) => {
   let queryResults = [];
   let items = null;
+  const sk_pattern = generateTaskSk(userEmail);
   const params = {
     TableName: TABLE_NAME,
-    KeyConditionExpression: 'pk = :pk',
+    KeyConditionExpression: 'pk = :pk AND begins_with(sk, :sk)',
     ExpressionAttributeValues: {
       ':pk': PK_VALUE.task,
+      ':sk': sk_pattern
     }
   };
 
@@ -36,10 +38,10 @@ exports.getAllTasks = async () => {
  * @param {String} note Note of task
  * @returns created task
  */
-exports.createTask = async (note) => {
+exports.createTask = async (userEmail, note) => {
   try {
     const newTaskId = shortid.generate();
-    const sk = generateTaskSk(USER_ID, newTaskId);
+    const sk = generateTaskSk(userEmail, newTaskId);
 
     const params = {
       TableName: TABLE_NAME,
@@ -68,9 +70,9 @@ exports.createTask = async (note) => {
  * @param {string} id id of task
  * @returns task in *object* type if found, else *undefined* instead
  */
-exports.getTaskById = async (id) => {
+exports.getTaskById = async (userEmail, id) => {
   try {
-    const sk = generateTaskSk(USER_ID, id);
+    const sk = generateTaskSk(userEmail, id);
     const params = {
       TableName: TABLE_NAME,
       Key: {
@@ -90,9 +92,9 @@ exports.getTaskById = async (id) => {
  * @param {string} id id of task
  * @returns task in *object* type if found, else *undefined* instead
  */
-exports.findOneAndUpdateTaskById = async (id, newData) => {
+exports.findOneAndUpdateTaskById = async (userEmail, id, newData) => {
   try {
-    const sk = generateTaskSk(USER_ID, id);
+    const sk = generateTaskSk(userEmail, id);
     const updateExpression = generateUpdateExpression(newData);
     const expressionAttributeValues = generateUpdateExpressionAttributeValues(newData);
 
@@ -118,9 +120,9 @@ exports.findOneAndUpdateTaskById = async (id, newData) => {
  * @param {String} id Deleting task's Id
  * @returns *True* if succeed, *false* otherwise
  */
-exports.findOneAndDeleteTaskById = async (id) => {
+exports.findOneAndDeleteTaskById = async (userEmail, id) => {
   try {
-    const sk = generateTaskSk(USER_ID, id);
+    const sk = generateTaskSk(userEmail, id);
     const params = {
       TableName: TABLE_NAME,
       Key: {
@@ -133,30 +135,3 @@ exports.findOneAndDeleteTaskById = async (id) => {
     throw new Error(error.message);
   }
 }
-
-
-// Demo function
-/**
-//  * @param {Number} timestamp 
-//  * @returns *array* of matching query items
-//  */
-// const findTasksByCreateTime = async (timestamp) => {
-//   try {
-//     const params = {
-//       TableName : TABLE_NAME,
-//       KeyConditionExpression: "#id >= :id",
-//       ExpressionAttributeNames:{
-//           "#id": "taskId"
-//       },
-//       ExpressionAttributeValues: {
-//           ":id": timestamp
-//       }
-//     };
-
-//     const result = await docClient.query(params).promise();
-
-//     return result;
-//   } catch (error) {
-//     throw new Error(error.message);
-//   }
-// }

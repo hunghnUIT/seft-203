@@ -15,11 +15,12 @@ const graphql = require('graphql');
 
 module.exports.createTask = async function (event, context) {
   try {
+    const userEmail = event.requestContext.authorizer.userEmail;
     if (event.body) {
       const proceedBody = JSON.parse(event.body);
 
       if (isNotEmptyObj(proceedBody)) {
-        const newTask = await taskServices.createTask(proceedBody.note);
+        const newTask = await taskServices.createTask(userEmail, proceedBody.note);
 
         return generateSuccessResponse(newTask);
       }
@@ -33,7 +34,8 @@ module.exports.createTask = async function (event, context) {
 
 module.exports.getAllTasks = async function (event, context) {
   try {
-    const tasks = await taskServices.getAllTasks();
+    const userEmail = event.requestContext.authorizer.userEmail;
+    const tasks = await taskServices.getAllTasks(userEmail);
 
     return generateSuccessResponse(tasks);
   } catch (err) {
@@ -43,8 +45,9 @@ module.exports.getAllTasks = async function (event, context) {
 
 module.exports.getTaskById = async function (event, context) {
   try {
+    const userEmail = event.requestContext.authorizer.userEmail;
     if (event?.pathParameters?.id) {
-      const task = await taskServices.getTaskById(event.pathParameters.id);
+      const task = await taskServices.getTaskById(userEmail, event.pathParameters.id);
 
       if (task)
         return generateSuccessResponse(task);
@@ -60,6 +63,7 @@ module.exports.getTaskById = async function (event, context) {
 
 module.exports.updateTaskById = async function (event, context) {
   try {
+    const userEmail = event.requestContext.authorizer.userEmail;
     if (event.pathParameters?.id && event.body) {
       const proceedBody = JSON.parse(event.body);
 
@@ -69,7 +73,7 @@ module.exports.updateTaskById = async function (event, context) {
           note: proceedBody.note,
         })
 
-        const updateResult = await taskServices.findOneAndUpdateTaskById(event.pathParameters.id, allowedToUpdateFields);
+        const updateResult = await taskServices.findOneAndUpdateTaskById(userEmail, event.pathParameters.id, allowedToUpdateFields);
 
         return generateSuccessResponse(updateResult);
         // Should I find task before update to identify does task exist
@@ -85,9 +89,10 @@ module.exports.updateTaskById = async function (event, context) {
 
 module.exports.deleteTaskById = async function (event, context) {
   try {
+    const userEmail = event.requestContext.authorizer.userEmail;
     if (event?.pathParameters?.id) {
       // DynamoDB always execute delete and return {} even that the record not in DB
-      await taskServices.findOneAndDeleteTaskById(event.pathParameters.id);
+      await taskServices.findOneAndDeleteTaskById(userEmail, event.pathParameters.id);
       return generateSuccessResponse({});
     }
 
@@ -169,6 +174,15 @@ module.exports.getUserByEmail = async (event, context) => {
     }
 
     return generateFailureResponse({ message: 'Not enough params' });
+  } catch (err) {
+    return generateFailureResponse({ message: err.message }, 500);
+  }
+};
+
+module.exports.myAccount = async (event, context) => {
+  try {
+    const result = await userServices.getUserByEmail(event.requestContext.authorizer.user);
+    return generateSuccessResponse(result);
   } catch (err) {
     return generateFailureResponse({ message: err.message }, 500);
   }

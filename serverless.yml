@@ -31,30 +31,40 @@ functions:
       - http: # Do là API nên event sẽ thuộc dạng HTTP
           path: /tasks # đường dẫn API
           method: get # method cho phép để trigger function
+          cors: true
+          authorizer: authorize
   createTask:
     handler: handler.createTask
     events:
       - http:
           path: /tasks
           method: post
+          cors: true
+          authorizer: authorize
   getTaskById:
     handler: handler.getTaskById
     events:
       - http:
           path: /tasks/{id}
           method: get
+          cors: true
+          authorizer: authorize
   updateTaskById:
     handler: handler.updateTaskById
     events:
       - http:
           path: /tasks/{id}
           method: put
+          cors: true
+          authorizer: authorize
   deleteTaskById:
     handler: handler.deleteTaskById
     events:
       - http:
           path: /tasks/{id}
           method: delete
+          cors: true
+          authorizer: authorize
   graphql:
     handler: handler.graphql
     events:
@@ -88,6 +98,15 @@ functions:
     events:
       - http:
           path: /users/{userEmail}
+          method: get
+          cors: true
+          authorizer: authorize
+  myAccount:
+    handler: 
+      handler.myAccount
+    events:
+      - http:
+          path: /my-account
           method: get
           cors: true
           authorizer: authorize

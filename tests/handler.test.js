@@ -75,7 +75,7 @@ describe('handler/getAllTasks', () => {
   const sample_successResponse = [{
     "5": {
       "note": "Say Konichiwa UIT",
-      "userId": "user_00",
+      "userEmail": "test@gmail.com",
       "isChecked": false,
       "taskId": "krh0ns-Sw"
     }
@@ -122,7 +122,7 @@ describe('handler/getTaskById', () => {
   };
   const sample_successResponse = {
     "note": "Do UwU",
-    "userId": "user_00",
+    "userEmail": "test@gmail.com",
     "isChecked": false,
     "taskId": "-gNdsuDhO"
   };
@@ -191,7 +191,7 @@ describe('handler/updateTaskById', () => {
   };
   const sample_successResponse = {
     "note": "Do UwU",
-    "userId": "user_00",
+    "userEmail": "test@gmail.com",
     "isChecked": false,
     "taskId": "-gNdsuDhO"
   };
