@@ -92,15 +92,15 @@ functions:
       - http:
           path: auth/login
           method: post
-  getUserByEmail:
-    handler: 
-      handler.getUserByEmail
-    events:
-      - http:
-          path: /users/{userEmail}
-          method: get
-          cors: true
-          authorizer: authorize
+  # getUserByEmail:
+  #   handler: 
+  #     handler.getUserByEmail
+  #   events:
+  #     - http:
+  #         path: /users/{userEmail}
+  #         method: get
+  #         cors: true
+  #         authorizer: authorize
   myAccount:
     handler: 
       handler.myAccount

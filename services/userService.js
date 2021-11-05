@@ -18,7 +18,7 @@ exports.getUserByEmail = async (userEmail, includePassword = false) => {
     const queryResult = await docClient.get(params).promise();
     const userData = queryResult.Item;
     if (userData) {
-      const user = await new User({ ...userData });
+      const user = new User({ ...userData });
       if(!includePassword) {
         delete user.password;
       }
@@ -33,7 +33,7 @@ exports.getUserByEmail = async (userEmail, includePassword = false) => {
 exports.createUser = async (user) => {
   try {
     const { email, password, name } = user;
-    const newUser = await new User({ email, password, name});
+    const newUser = new User({ email, password, name});
     await newUser.saveToDb(true);
     return newUser;
   } catch (error) {
@@ -49,7 +49,7 @@ exports.checkVerifyEmailToken = async (token) => {
 
     // Not found token or token expires
     if (!user) {
-      throw new Error('Invalid or expired token');
+      throw new Error('invalid signature');
     }
 
     user.setVerifiedEmail();
@@ -58,7 +58,7 @@ exports.checkVerifyEmailToken = async (token) => {
     return user;
   } catch (error) {
     if (error.message === 'invalid signature')
-      throw new Error('Invalid or expired token');
+      throw new Error('invalid signature');
     else
       throw new Error(error.message);
   }

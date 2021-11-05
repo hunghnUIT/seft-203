@@ -133,13 +133,16 @@ module.exports.register = async function (event, context) {
 
     return generateFailureResponse({ message: 'Event body is required' });
   } catch (err) {
-    return generateFailureResponse({ message: err.message }, 500)
+    if (err.message.includes('is required'))
+      return generateFailureResponse({ message: err.message }, 400);
+    else
+      return generateFailureResponse({ message: err.message }, 500);
   }
 };
 
 module.exports.verifyEmail = async function(event, context) {
   try {
-    if (event.pathParameters.token) {
+    if (event.pathParameters?.token) {
       const verifiedUser = await userServices.checkVerifyEmailToken(event.pathParameters.token);
       return {
         statusCode: 200,
@@ -161,27 +164,30 @@ module.exports.verifyEmail = async function(event, context) {
           </html>`,
       }
     }
+    return generateFailureResponse({ message: 'No token provided' }, 400);
   } catch (err) {
-    return generateFailureResponse({ message: err.message }, 400)
-  }
-};
-
-module.exports.getUserByEmail = async (event, context) => {
-  try {
-    if (event.pathParameters?.userEmail) {
-      const result = await userServices.getUserByEmail(event.pathParameters.userEmail);
-      return generateSuccessResponse(result);
-    }
-
-    return generateFailureResponse({ message: 'Not enough params' });
-  } catch (err) {
+    if (err.message === 'invalid signature')
+      return generateFailureResponse({ message: 'Invalid or expired token' }, 400);
     return generateFailureResponse({ message: err.message }, 500);
   }
 };
 
+// module.exports.getUserByEmail = async (event, context) => {
+//   try {
+//     if (event.pathParameters?.userEmail) {
+//       const result = await userServices.getUserByEmail(event.pathParameters.userEmail);
+//       return generateSuccessResponse(result);
+//     }
+
+//     return generateFailureResponse({ message: 'Not enough params' });
+//   } catch (err) {
+//     return generateFailureResponse({ message: err.message }, 500);
+//   }
+// };
+
 module.exports.myAccount = async (event, context) => {
   try {
-    const result = await userServices.getUserByEmail(event.requestContext.authorizer.user);
+    const result = await userServices.getUserByEmail(event.requestContext.authorizer.userEmail);
     return generateSuccessResponse(result);
   } catch (err) {
     return generateFailureResponse({ message: err.message }, 500);
@@ -211,6 +217,9 @@ module.exports.login = async (event, context) => {
     }
     return generateFailureResponse({ message: 'Email and password are required' });
   } catch (err) {
-    return generateFailureResponse({ message: err.message }, 500);
+    if (err.message.includes('is required'))
+      return generateFailureResponse({ message: err.message }, 400);
+    else
+      return generateFailureResponse({ message: err.message }, 500);
   }
 };

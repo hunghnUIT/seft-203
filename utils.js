@@ -48,10 +48,8 @@ exports.generateFailureResponse = (data, statusCode = 400, graphqlResponseType =
 
 exports.isNotEmptyObj = (obj) => {
   try {
-    return Object.keys(obj).length;
+    return !!Object.keys(obj).length;
   } catch (error) {
-    console.log(error.message);
-
     return false;
   }
 }
@@ -80,9 +78,8 @@ exports.generateUpdateExpression = (data) => {
 exports.generateUpdateExpressionAttributeValues = (data) => {
   let result = {};
 
-  for (const key in data) {
+  for (const key in data)
     result[`:${key}`] = data[key];
-  }
 
   return result;
 }

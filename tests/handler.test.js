@@ -1,11 +1,13 @@
 const sinon = require('sinon');
-const { beforeEach, afterEach } = require('mocha');
+const { beforeEach, afterEach, it } = require('mocha');
+const jwt = require('jsonwebtoken');
 
-const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTaskById } = require('../handler');
+const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTaskById, register, verifyEmail } = require('../handler');
 const { docClient } = require('../libs/dynamoDb');
+const User = require('../models/User');
 
 const successfulActionResult = { statusCode: 200 };
-const failedActionResult = { statusCode: 400 };
+const badRequestResult = { statusCode: 400 };
 const notFoundResult = { statusCode: 404 };
 const internalErrorResult = { statusCode: 500 };
 
@@ -20,11 +22,10 @@ describe('handler/createTask', () => {
 
   const sample_validBody = `{ "note": "testing create new task" }`;
   const sample_nullBody = null;
-  const sample_event = {};
   const sample_authorizedEvent = {
-    requestContext: { 
+    requestContext: {
       authorizer: {
-        userEmail: 'test@gmail.com' 
+        userEmail: 'test@gmail.com'
       }
     }
   };
@@ -36,7 +37,7 @@ describe('handler/createTask', () => {
       ...sample_authorizedEvent,
       body: sample_nullBody,
     });
-    sinon.assert.match(result, failedActionResult);
+    sinon.assert.match(result, badRequestResult);
   })
 
   it('should return success message if create task successfully', async () => {
@@ -80,9 +81,9 @@ describe('handler/getAllTasks', () => {
   });
 
   const sample_authorizedEvent = {
-    requestContext: { 
+    requestContext: {
       authorizer: {
-        userEmail: 'test@gmail.com' 
+        userEmail: 'test@gmail.com'
       }
     }
   };
@@ -135,9 +136,9 @@ describe('handler/getTaskById', () => {
     },
   };
   const sample_authorizedEvent = {
-    requestContext: { 
+    requestContext: {
       authorizer: {
-        userEmail: 'test@gmail.com' 
+        userEmail: 'test@gmail.com'
       }
     }
   };
@@ -152,7 +153,7 @@ describe('handler/getTaskById', () => {
 
   it('should throw error if no body provided', async () => {
     const result = await fn(sample_authorizedEvent);
-    sinon.assert.match(result, failedActionResult);
+    sinon.assert.match(result, badRequestResult);
   })
 
   it('should response code 404 if getTaskById not found', async () => {
@@ -186,7 +187,7 @@ describe('handler/getTaskById', () => {
   it('should return success message if getTaskById succeed', async () => {
     getTaskServiceStub.callsFake(function () {
       return {
-        promise: () => Promise.resolve({Item: sample_successResponse})
+        promise: () => Promise.resolve({ Item: sample_successResponse })
       };
     });
 
@@ -208,9 +209,9 @@ describe('handler/updateTaskById', () => {
   });
 
   const sample_authorizedEvent = {
-    requestContext: { 
+    requestContext: {
       authorizer: {
-        userEmail: 'test@gmail.com' 
+        userEmail: 'test@gmail.com'
       }
     }
   };
@@ -237,7 +238,7 @@ describe('handler/updateTaskById', () => {
 
   it('should throw error if no body and ID are provided', async () => {
     const result = await fn(sample_authorizedEvent);
-    sinon.assert.match(result, failedActionResult);
+    sinon.assert.match(result, badRequestResult);
   })
 
   it('should throw error if body and ID provided but body is empty', async () => {
@@ -245,7 +246,7 @@ describe('handler/updateTaskById', () => {
       ...sample_onlyIdProvidedEvent,
       ...sample_authorizedEvent
     });
-    sinon.assert.match(result, failedActionResult);
+    sinon.assert.match(result, badRequestResult);
   })
 
   it('should throw error if findOneAndUpdateTaskById failed', async () => {
@@ -265,7 +266,7 @@ describe('handler/updateTaskById', () => {
   it('should return success message if findOneAndUpdateTaskById succeed', async () => {
     updateTaskServiceStub.callsFake(() => {
       return {
-        promise: () => Promise.resolve({Attributes: sample_successResponse})
+        promise: () => Promise.resolve({ Attributes: sample_successResponse })
       }
     });
 
@@ -288,9 +289,9 @@ describe('handler/deleteTaskById', () => {
   })
 
   const sample_authorizedEvent = {
-    requestContext: { 
+    requestContext: {
       authorizer: {
-        userEmail: 'test@gmail.com' 
+        userEmail: 'test@gmail.com'
       }
     }
   };
@@ -303,7 +304,7 @@ describe('handler/deleteTaskById', () => {
 
   it('should throw error if no body and ID are provided', async () => {
     const result = await fn(sample_authorizedEvent);
-    sinon.assert.match(result, failedActionResult);
+    sinon.assert.match(result, badRequestResult);
   })
 
   it('should throw error if findOneAndDeleteTaskById failed', async () => {
@@ -334,3 +335,203 @@ describe('handler/deleteTaskById', () => {
     sinon.assert.match(result, successfulActionResult)
   })
 })
+
+describe('handler/register', () => {
+  const email = 'email@test.com';
+  const password = 'password';
+  const name = 'name';
+  const unprocessedResult = { statusCode: 422 };
+  const createdResult = { statusCode: 201 };
+
+  describe('validation', () => {
+    it('should return bad request if no body is provided', async () => {
+      const result = await register({});
+      sinon.assert.match(result, badRequestResult);
+    });
+
+    it('should return bad request if no email is provided', async () => {
+      const result = await register({
+        body: JSON.stringify({
+          password,
+          name,
+        })
+      });
+      sinon.assert.match(result, badRequestResult);
+    });
+
+    it('should return bad request if no password is provided', async () => {
+      const result = await register({
+        body: JSON.stringify({
+          email,
+          name
+        })
+      });
+      sinon.assert.match(result, badRequestResult);
+    });
+
+    it('should return bad request if no name is provided', async () => {
+      const result = await register({
+        body: JSON.stringify({
+          email,
+          password
+        })
+      });
+      sinon.assert.match(result, badRequestResult);
+    });
+  });
+
+  describe('execution', () => {
+    let getUserByEmailStub;
+    let saveToDbStub;
+    let sendVerifyEmailStub;
+    beforeEach(() => {
+      getUserByEmailStub = sinon.stub(docClient, 'get');
+      saveToDbStub = sinon.stub(User.prototype, 'saveToDb');
+      sendVerifyEmailStub = sinon.stub(User.prototype, 'sendVerifyEmail');
+    });
+    afterEach(() => {
+      getUserByEmailStub.restore();
+      saveToDbStub.restore();
+      sendVerifyEmailStub.restore();
+    })
+
+    it('should return unprocessed result if user exists and verified', async () => {
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({
+            Item: {
+              email,
+              name,
+              password,
+              isVerified: true
+            }
+          })
+        };
+      });
+      const result = await register({
+        body: JSON.stringify({
+          email,
+          password,
+          name
+        })
+      });
+      sinon.assert.match(result, unprocessedResult);
+    });
+
+    it('should return internal error if error occur while doing creation', async () => {
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({})
+        };
+      });
+      saveToDbStub.rejects(new Error('validateError'));
+      const result = await register({
+        body: JSON.stringify({
+          email,
+          password,
+          name
+        })
+      })
+      sinon.assert.match(result, internalErrorResult);
+    });
+
+    it('should create new user and send verification email', async () => {
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({})
+        };
+      });
+      saveToDbStub.resolves();
+      sendVerifyEmailStub.resolves();
+      const result = await register({
+        body: JSON.stringify({
+          email,
+          password,
+          name
+        })
+      });
+      sinon.assert.calledWith(saveToDbStub, true);
+      sinon.assert.calledOnce(sendVerifyEmailStub);
+      sinon.assert.match(result, createdResult);
+    });
+  });
+});
+
+describe('handler/verifyEmail', () => {
+  describe('validation', () => {
+    it('should return bad request if no token is provided', async () => {
+      const result = await verifyEmail({});
+      sinon.assert.match(result, badRequestResult);
+    });
+  });
+
+  describe('execution', () => { 
+    const sample_validEvent = {
+      pathParameters: { token: 'token' }
+    }
+    const email = 'email@test.com';
+    let verifyStub;
+    let saveToDbStub;
+    let getUserByEmailStub;
+    let setVerifiedEmailSpy;
+    const sample_foundUser = {
+      email: email,
+      password: 'password',
+      name: 'name', 
+      isVerified: false
+    }
+    beforeEach(() => {
+      verifyStub = sinon.stub(jwt, 'verify');
+      saveToDbStub = sinon.stub(User.prototype, 'saveToDb');
+      getUserByEmailStub = sinon.stub(docClient, 'get');
+      setVerifiedEmailSpy = sinon.spy(User.prototype, 'setVerifiedEmail');
+    });
+    afterEach(() => {
+      verifyStub.restore();
+      saveToDbStub.restore();
+      getUserByEmailStub.restore();
+      setVerifiedEmailSpy.restore();
+    })
+
+    it('should return bad request if token is invalid', async () => {
+      verifyStub.throws(new Error('invalid signature'));
+      const result = await verifyEmail(sample_validEvent);
+      sinon.assert.match(result, badRequestResult);
+    });
+
+    it('should return internal error token is valid but finding user encounter error', async () => {
+      verifyStub.returns({ email });
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.reject(new Error('connection error'))
+        };
+      });
+      const result = await verifyEmail(sample_validEvent);
+      sinon.assert.match(result, internalErrorResult);
+    });
+
+    it('should return bad request if token is valid but not found any user', async () => {
+      verifyStub.returns({ email });
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({})
+        };
+      });
+      const result = await verifyEmail(sample_validEvent);
+      sinon.assert.match(result, badRequestResult);
+    });
+
+    it('should return success message if verification is done', async () => {
+      verifyStub.returns({ email });
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({ Item: {...sample_foundUser} })
+        };
+      });
+      const result = await verifyEmail(sample_validEvent);
+      sinon.assert.calledOnce(setVerifiedEmailSpy);
+      sinon.assert.calledOnce(saveToDbStub);
+      sinon.assert.match(result, successfulActionResult);
+    });
+  });
+});

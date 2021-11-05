@@ -10,13 +10,10 @@ const { JWT_EXPIRE } = require('../settings');
 
 class User {
   constructor({email, password, name, isVerified}) {
-    return (async () => {
-      this.email = email;
-      this.name = name;
-      this.password = password;
-      this.isVerified = isVerified;
-      return this;
-    })();
+    this.email = email;
+    this.name = name;
+    this.password = password;
+    this.isVerified = isVerified;
   }
 
   async encryptPassword(password) { 
