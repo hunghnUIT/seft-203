@@ -21,12 +21,19 @@ describe('handler/createTask', () => {
   const sample_validBody = `{ "note": "testing create new task" }`;
   const sample_nullBody = null;
   const sample_event = {};
+  const sample_authorizedEvent = {
+    requestContext: { 
+      authorizer: {
+        userEmail: 'test@gmail.com' 
+      }
+    }
+  };
 
   const fn = createTask;
 
   it('should return failure message if null in body', async () => {
     const result = await fn({
-      ...sample_event,
+      ...sample_authorizedEvent,
       body: sample_nullBody,
     });
     sinon.assert.match(result, failedActionResult);
@@ -40,7 +47,7 @@ describe('handler/createTask', () => {
     });
 
     const result = await fn({
-      ...sample_event,
+      ...sample_authorizedEvent,
       body: sample_validBody,
     });
     sinon.assert.match(result, successfulActionResult);
@@ -54,7 +61,7 @@ describe('handler/createTask', () => {
     });
 
     const result = await fn({
-      ...sample_event,
+      ...sample_authorizedEvent,
       body: sample_validBody,
     });
 
@@ -72,6 +79,13 @@ describe('handler/getAllTasks', () => {
     getAllTasksServiceStub.restore();
   });
 
+  const sample_authorizedEvent = {
+    requestContext: { 
+      authorizer: {
+        userEmail: 'test@gmail.com' 
+      }
+    }
+  };
   const sample_successResponse = [{
     "5": {
       "note": "Say Konichiwa UIT",
@@ -90,7 +104,7 @@ describe('handler/getAllTasks', () => {
       };
     });
 
-    const result = await fn();
+    const result = await fn(sample_authorizedEvent);
     sinon.assert.match(result, internalErrorResult);
   })
 
@@ -101,7 +115,7 @@ describe('handler/getAllTasks', () => {
       };
     });
 
-    const result = await fn();
+    const result = await fn(sample_authorizedEvent);
     sinon.assert.match(result, successfulActionResult)
   })
 })
@@ -120,6 +134,13 @@ describe('handler/getTaskById', () => {
       id: 'test',
     },
   };
+  const sample_authorizedEvent = {
+    requestContext: { 
+      authorizer: {
+        userEmail: 'test@gmail.com' 
+      }
+    }
+  };
   const sample_successResponse = {
     "note": "Do UwU",
     "userEmail": "test@gmail.com",
@@ -130,7 +151,7 @@ describe('handler/getTaskById', () => {
   const fn = getTaskById;
 
   it('should throw error if no body provided', async () => {
-    const result = await fn({});
+    const result = await fn(sample_authorizedEvent);
     sinon.assert.match(result, failedActionResult);
   })
 
@@ -141,7 +162,10 @@ describe('handler/getTaskById', () => {
       };
     });
 
-    const result = await fn(sample_validEvent);
+    const result = await fn({
+      ...sample_validEvent,
+      ...sample_authorizedEvent,
+    });
     sinon.assert.match(result, notFoundResult);
   })
 
@@ -152,7 +176,10 @@ describe('handler/getTaskById', () => {
       };
     });
 
-    const result = await fn(sample_validEvent);
+    const result = await fn({
+      ...sample_validEvent,
+      ...sample_authorizedEvent,
+    });
     sinon.assert.match(result, internalErrorResult);
   })
 
@@ -163,7 +190,10 @@ describe('handler/getTaskById', () => {
       };
     });
 
-    const result = await fn(sample_validEvent);
+    const result = await fn({
+      ...sample_validEvent,
+      ...sample_authorizedEvent,
+    });
     sinon.assert.match(result, successfulActionResult)
   })
 })
@@ -177,6 +207,13 @@ describe('handler/updateTaskById', () => {
     updateTaskServiceStub.restore();
   });
 
+  const sample_authorizedEvent = {
+    requestContext: { 
+      authorizer: {
+        userEmail: 'test@gmail.com' 
+      }
+    }
+  };
   const sample_validEvent = {
     pathParameters: {
       id: 'test',
@@ -199,12 +236,15 @@ describe('handler/updateTaskById', () => {
   const fn = updateTaskById;
 
   it('should throw error if no body and ID are provided', async () => {
-    const result = await fn({});
+    const result = await fn(sample_authorizedEvent);
     sinon.assert.match(result, failedActionResult);
   })
 
   it('should throw error if body and ID provided but body is empty', async () => {
-    const result = await fn(sample_onlyIdProvidedEvent);
+    const result = await fn({
+      ...sample_onlyIdProvidedEvent,
+      ...sample_authorizedEvent
+    });
     sinon.assert.match(result, failedActionResult);
   })
 
@@ -215,7 +255,10 @@ describe('handler/updateTaskById', () => {
       }
     });
 
-    const result = await fn(sample_validEvent);
+    const result = await fn({
+      ...sample_validEvent,
+      ...sample_authorizedEvent
+    });
     sinon.assert.match(result, internalErrorResult);
   })
 
@@ -226,7 +269,10 @@ describe('handler/updateTaskById', () => {
       }
     });
 
-    const result = await fn(sample_validEvent);
+    const result = await fn({
+      ...sample_validEvent,
+      ...sample_authorizedEvent
+    });
     sinon.assert.match(result, successfulActionResult)
   })
 })
@@ -241,6 +287,13 @@ describe('handler/deleteTaskById', () => {
     deleteTaskByIdServiceStub.restore();
   })
 
+  const sample_authorizedEvent = {
+    requestContext: { 
+      authorizer: {
+        userEmail: 'test@gmail.com' 
+      }
+    }
+  };
   const sample_validEvent = {
     pathParameters: {
       id: 'test'
@@ -249,7 +302,7 @@ describe('handler/deleteTaskById', () => {
   const fn = deleteTaskById;
 
   it('should throw error if no body and ID are provided', async () => {
-    const result = await fn({});
+    const result = await fn(sample_authorizedEvent);
     sinon.assert.match(result, failedActionResult);
   })
 
@@ -260,7 +313,10 @@ describe('handler/deleteTaskById', () => {
       }
     });
 
-    const result = await fn(sample_validEvent);
+    const result = await fn({
+      ...sample_validEvent,
+      ...sample_authorizedEvent
+    });
     sinon.assert.match(result, internalErrorResult);
   })
 
@@ -271,7 +327,10 @@ describe('handler/deleteTaskById', () => {
       }
     });
 
-    const result = await fn(sample_validEvent);
+    const result = await fn({
+      ...sample_validEvent,
+      ...sample_authorizedEvent
+    });
     sinon.assert.match(result, successfulActionResult)
   })
 })

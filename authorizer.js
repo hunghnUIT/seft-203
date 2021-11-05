@@ -1,9 +1,7 @@
 const jwt = require('jsonwebtoken');
 
-const {
-  generateAuthResponse,
-} = require('./utils');
-const { getUserByEmail  } = require('./services/userService');
+const utils = require('./utils');
+const services = require('./services/userService');
 
 module.exports.authorize = async (event, context, callback) => {
   const token = event.authorizationToken.replace('Bearer ', '');
@@ -15,11 +13,14 @@ module.exports.authorize = async (event, context, callback) => {
   const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
   if (decoded && decoded.email) {
-    const user = await getUserByEmail(decoded.email);
-    if (user)
-      return callback(null, generateAuthResponse(decoded.email, 'Allow', methodArn, {
+    const user = await services.getUserByEmail(decoded.email);
+    if (user) {
+      const allowResponse = utils.generateAuthResponse(decoded.email, 'Allow', methodArn, {
         userEmail: user.email,
-      }));
+      });
+      return callback(null, allowResponse);
+    }
   }
-  return callback(null, generateAuthResponse(decoded.email, 'Deny', methodArn));
+  const denyResponse = utils.generateAuthResponse(decoded.email, 'Deny', methodArn);
+  return callback(null, denyResponse);
 };
