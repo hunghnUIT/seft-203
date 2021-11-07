@@ -2,7 +2,7 @@ const sinon = require('sinon');
 const { beforeEach, afterEach, it } = require('mocha');
 const jwt = require('jsonwebtoken');
 
-const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTaskById, register, verifyEmail } = require('../handler');
+const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTaskById, register, verifyEmail, myAccount ,login } = require('../handler');
 const { docClient } = require('../libs/dynamoDb');
 const User = require('../models/User');
 
@@ -465,7 +465,7 @@ describe('handler/verifyEmail', () => {
     });
   });
 
-  describe('execution', () => { 
+  describe('execution', () => {
     const sample_validEvent = {
       pathParameters: { token: 'token' }
     }
@@ -477,7 +477,7 @@ describe('handler/verifyEmail', () => {
     const sample_foundUser = {
       email: email,
       password: 'password',
-      name: 'name', 
+      name: 'name',
       isVerified: false
     }
     beforeEach(() => {
@@ -525,12 +525,166 @@ describe('handler/verifyEmail', () => {
       verifyStub.returns({ email });
       getUserByEmailStub.callsFake(() => {
         return {
-          promise: () => Promise.resolve({ Item: {...sample_foundUser} })
+          promise: () => Promise.resolve({ Item: { ...sample_foundUser } })
         };
       });
       const result = await verifyEmail(sample_validEvent);
       sinon.assert.calledOnce(setVerifiedEmailSpy);
       sinon.assert.calledOnce(saveToDbStub);
+      sinon.assert.match(result, successfulActionResult);
+    });
+  });
+});
+
+describe('handler/myAccount', () => {
+  let getUserByEmailStub;
+  beforeEach(() => {
+    getUserByEmailStub = sinon.stub(docClient, 'get');
+  });
+  afterEach(() => {
+    getUserByEmailStub.restore();
+  })
+  const sample_authorizedEvent = {
+    requestContext: {
+      authorizer: {
+        userEmail: 'test@gmail.com'
+      }
+    }
+  };
+  const sample_userInfo = {
+    email: 'test@gmail.com', 
+    password: 'test', 
+    name: 'test',
+  }
+  it('should return internal error if find user encountered error', async () => {
+    getUserByEmailStub.callsFake(() => {
+      return {
+        promise: () => Promise.reject(new Error('Internal error'))
+      }
+    });
+    const result = await myAccount(sample_authorizedEvent);
+    sinon.assert.match(result, internalErrorResult);
+  });
+
+  it('should return success response if no error encountered', async () => {
+    getUserByEmailStub.callsFake(() => {
+      return {
+        promise: () => Promise.resolve({Item: sample_userInfo})
+      }
+    });
+    const result = await myAccount(sample_authorizedEvent);
+    sinon.assert.match(result, successfulActionResult);
+  });
+});
+
+describe('handler/login', () => {
+  const email = 'test@example.com';
+  const password = 'password';
+  const invalidCredentialsResult = { statusCode: 401 }
+
+  describe('validation', () => {
+    it('should return bad request if no body is provided', async () => {
+      const result = await login({});
+      sinon.assert.match(result, badRequestResult);
+    });
+
+    it('should return bad request if no email is provided', async () => {
+      const result = await login({ body: JSON.stringify({ password }) });
+      sinon.assert.match(result, badRequestResult);
+    });
+
+    it('should return bad request if no password is provided', async () => {
+      const result = await login({ body: JSON.stringify({ email }) });
+      sinon.assert.match(result, badRequestResult);
+    });
+  });
+  describe('execution', () => {
+    const sample_foundUserInfo = {
+      email,
+      password,
+    }
+    let getUserByEmailStub;
+    let matchPasswordStub;
+    let getAccessTokenStub;
+    beforeEach(() => {
+      getUserByEmailStub = sinon.stub(docClient, 'get');
+      matchPasswordStub = sinon.stub(User.prototype, 'matchPassword');
+      getAccessTokenStub = sinon.stub(User.prototype, 'getAccessToken');
+    });
+
+    afterEach(() => {
+      getUserByEmailStub.restore();
+      matchPasswordStub.restore();
+      getAccessTokenStub.restore();
+    });
+
+    it('should return invalid credentials if no user found with provided email', async () => {
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({})
+        };
+      });
+      const result = await login({ body: JSON.stringify({ email, password }) });
+      sinon.assert.match(result, invalidCredentialsResult);
+    });
+
+    it('should return internal error if finding user encountered error', async () => {
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.reject(new Error('Internal error'))
+        };
+      });
+      const result = await login({ body: JSON.stringify({ email, password }) });
+      sinon.assert.match(result, internalErrorResult);
+    });
+
+    it('should return need verify email message if user is not verified yet', async () => {
+      const unprocessedResult = { statusCode: 422 };
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({
+            Item: {
+              ...sample_foundUserInfo,
+              isVerified: false
+            }
+          })
+        };
+      });
+      const result = await login({ body: JSON.stringify({ email, password }) });
+      sinon.assert.match(result, unprocessedResult);
+    });
+
+    it('should return invalid credentials if provided password is not match', async () => {
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({
+            Item: {
+              ...sample_foundUserInfo,
+              isVerified: true
+            }
+          })
+        };
+      });
+      matchPasswordStub.resolves(false);
+      const result = await login({ body: JSON.stringify({ email, password }) });
+      sinon.assert.match(result, invalidCredentialsResult);
+    });
+
+    it('should return token if credentials match', async () => {
+      getUserByEmailStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({
+            Item: {
+              ...sample_foundUserInfo,
+              isVerified: true
+            }
+          })
+        };
+      });
+      matchPasswordStub.resolves(true);
+      getAccessTokenStub.returns('token');
+      const result = await login({ body: JSON.stringify({ email, password }) });
+      sinon.assert.calledOnce(getAccessTokenStub);
       sinon.assert.match(result, successfulActionResult);
     });
   });
