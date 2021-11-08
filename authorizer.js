@@ -14,7 +14,8 @@ module.exports.authorize = async (event, context, callback) => {
 
   if (decoded && decoded.email) {
     const user = await services.getUserByEmail(decoded.email);
-    if (user) {
+    const isUniqueValidToken = user.checkUniqueValidToken(token);
+    if (user && isUniqueValidToken) {
       const allowResponse = utils.generateAuthResponse(decoded.email, 'Allow', methodArn, {
         userEmail: user.email,
       });

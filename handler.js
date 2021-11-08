@@ -102,6 +102,17 @@ module.exports.deleteTaskById = async function (event, context) {
   }
 }
 
+module.exports.searchTaskByNote = async function (event, context) {
+  try {
+    if (event.pathParameters.keyword) {
+      
+    }
+    return generateFailureResponse({ message: 'Not enough params' });
+  } catch (error) {
+    return generateFailureResponse({ message: error.message }, 500);
+  }
+}
+
 module.exports.graphql = async function (event, context) {
   return graphql.graphql(graphQLSchema, event.body)
     .then(result => {
@@ -213,6 +224,8 @@ module.exports.login = async (event, context) => {
         return generateFailureResponse({ message: 'Invalid credentials' }, 401);
 
       const token = user.getAccessToken();
+      await user.setToken(token);
+      await user.saveToDb();
       return generateSuccessResponse({ accessToken: token }, 200);
     }
     return generateFailureResponse({ message: 'Email and password are required' });
@@ -223,3 +236,25 @@ module.exports.login = async (event, context) => {
       return generateFailureResponse({ message: err.message }, 500);
   }
 };
+
+module.exports.logout = async function (event, context) {
+  try {
+    const user = await userServices.getUserByEmail(event.requestContext.authorizer.userEmail, true);
+    await user.setToken('');
+    await user.saveToDb();
+    return generateSuccessResponse({ message: 'success' }, 200);
+  } catch (error) {
+    return generateFailureResponse({ message: error.message }, 500);
+  }
+};
+
+module.exports.report = async function (event, context) {
+  try {
+    if (event.pathParameters.collection && event.pathParameters.field) {
+
+    }
+    return generateFailureResponse({ message: 'Not enough params' });
+  } catch (error) {
+    return generateFailureResponse({ message: error.message }, 500);
+  }
+}

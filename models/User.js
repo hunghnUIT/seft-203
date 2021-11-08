@@ -9,23 +9,18 @@ const { JWT_EXPIRE } = require('../settings');
 
 
 class User {
-  constructor({email, password, name, isVerified}) {
+  constructor({email, password, name, isVerified, token}) {
     this.email = email;
     this.name = name;
     this.password = password;
     this.isVerified = isVerified;
+    this.token = token;
   }
 
   async encryptPassword(password) { 
     const salt = await bcrypt.genSalt(10);
     const encryptPassword = await bcrypt.hash(password, salt);
     return encryptPassword;
-  }
-
-  getAccessToken() {
-    return jwt.sign({email: this.email} , process.env['JWT_SECRET'], {
-        expiresIn: settings.JWT_EXPIRE
-    })
   }
 
   async matchPassword(enteredPassword) {
@@ -43,7 +38,8 @@ class User {
       email: this.email,
       password: this.password,
       name: this.name,
-      isVerified: this.isVerified ?? false
+      isVerified: this.isVerified ?? false,
+      token: this.token
     }
     const params = {
       TableName: TABLE_NAME,
@@ -90,6 +86,21 @@ class User {
       expiresIn: JWT_EXPIRE
     });
   };
+
+  setToken(token) {
+    // Grab a part of accessToken for verification purpose
+    if (token) {
+      const halfTokenLength = Math.floor(token.length/2);
+      this.token = token.substring(0, halfTokenLength);
+    }
+    else
+      this.token = token;
+  };
+
+  checkUniqueValidToken(inputToken) {
+    // Only one token is valid for a moment
+    return inputToken.includes(this.token);
+  }
 };
 
 module.exports = User;
