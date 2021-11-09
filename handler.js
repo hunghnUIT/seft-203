@@ -242,7 +242,7 @@ module.exports.logout = async function (event, context) {
     const user = await userServices.getUserByEmail(event.requestContext.authorizer.userEmail, true);
     await user.setToken('');
     await user.saveToDb();
-    return generateSuccessResponse({ message: 'success' }, 200);
+    return generateSuccessResponse({}, 200);
   } catch (error) {
     return generateFailureResponse({ message: error.message }, 500);
   }

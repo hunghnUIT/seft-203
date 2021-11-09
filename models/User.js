@@ -91,7 +91,7 @@ class User {
     // Grab a part of accessToken for verification purpose
     if (token) {
       const halfTokenLength = Math.floor(token.length/2);
-      this.token = token.substring(0, halfTokenLength);
+      this.token = token.substring(halfTokenLength);
     }
     else
       this.token = token;
@@ -99,6 +99,8 @@ class User {
 
   checkUniqueValidToken(inputToken) {
     // Only one token is valid for a moment
+    if (!this.token)
+      return false;
     return inputToken.includes(this.token);
   }
 };

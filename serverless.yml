@@ -92,6 +92,14 @@ functions:
       - http:
           path: auth/login
           method: post
+  logout:
+    handler: 
+      handler.logout
+    events:
+      - http:
+          path: auth/logout
+          method: get
+          authorizer: authorize
   # getUserByEmail:
   #   handler: 
   #     handler.getUserByEmail
@@ -128,6 +136,23 @@ resources:
             KeyType: HASH
           - AttributeName: sk
             KeyType: RANGE
+        LocalSecondaryIndexes:
+          - IndexName: isCheckedIndex
+            KeySchema:
+              - AttributeName: pk
+                KeyType: HASH
+              - AttributeName: isChecked
+                KeyType: RANGE
+            Projection:
+              ProjectionType: 'ALL'
+          - IndexName: noteIndex
+            KeySchema:
+              - AttributeName: pk
+                KeyType: HASH
+              - AttributeName: note
+                KeyType: RANGE
+            Projection:
+              ProjectionType: 'ALL'
         ProvisionedThroughput:
           ReadCapacityUnits: 1
           WriteCapacityUnits: 1
