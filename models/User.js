@@ -60,7 +60,7 @@ class User {
     const host = event['headers']['Host'];
     const stage = event['requestContext']['stage'];
     const verifyToken = this.getVerifyEmailToken();
-    const verifyURL = `https://${host}/${stage}/register/verify/${verifyToken}`
+    const verifyURL = `https://${host}/${stage}/auth/register/verify/${verifyToken}`
     const message = `You are receiving this email because you (or someone else) has requested the verification of email. Click at the link below to verify the email if that person was you: \n\n ${verifyURL}`
 
     let success = false;

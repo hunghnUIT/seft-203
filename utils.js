@@ -99,6 +99,15 @@ exports.generateTaskSk = (userEmail, taskId) => {
   return sk;
 };
 
+/**
+ * Create value for queryable field to reduce cost when need to query from DynamoDB
+ * @param {Array} values the order of elements in this array ***DO MATTER*** to query performance
+ * @returns String
+ */
+exports.generateQueryableFieldValue = (values) => {
+  return values.join('::');
+}
+
 exports.generateUserSk = (userEmail) => {
   let sk = SK_PATTERN_VALUE.user;
   sk = sk.replace('${userEmail}', userEmail);

@@ -4,7 +4,7 @@ const {
 } = require('../libs/dynamoDb');
 const { PK_VALUE, TABLE_NAME } = require('../settings');
 const { generateUpdateExpression, generateUpdateExpressionAttributeValues } = require('../utils');
-const { generateTaskSk } = require('../utils');
+const { generateTaskSk, generateQueryableFieldValue } = require('../utils');
 
 
 /**
@@ -42,25 +42,24 @@ exports.createTask = async (userEmail, note) => {
   try {
     const newTaskId = shortid.generate();
     const sk = generateTaskSk(userEmail, newTaskId);
+    const isCheckedValue = false;
+    const queryableValue = generateQueryableFieldValue([userEmail, isCheckedValue])
 
+    const item = {
+      'pk': PK_VALUE.task,
+      'sk': sk,
+      'isChecked': isCheckedValue,
+      'note': note,
+      'queryableField': queryableValue
+    };
     const params = {
       TableName: TABLE_NAME,
-      Item: {
-        'pk': PK_VALUE.task,
-        'sk': sk,
-        'isChecked': false,
-        'note': note,
-      },
+      Item: item,
       ReturnValues: 'ALL_OLD',
     };
     await docClient.put(params).promise();
 
-    return {
-      'pk': PK_VALUE.task,
-      'sk': sk,
-      'isChecked': false,
-      'note': note,
-    };
+    return item;
   } catch (error) {
     throw new Error('Create new task failed. Error: ' + error.message);
   }
@@ -94,9 +93,14 @@ exports.getTaskById = async (userEmail, id) => {
  */
 exports.findOneAndUpdateTaskById = async (userEmail, id, newData) => {
   try {
+    const proceedData = {...newData};
+    if (proceedData.hasOwnProperty('isChecked')) {
+      proceedData.queryableField = generateQueryableFieldValue([userEmail, proceedData.isChecked])
+    }
+
     const sk = generateTaskSk(userEmail, id);
-    const updateExpression = generateUpdateExpression(newData);
-    const expressionAttributeValues = generateUpdateExpressionAttributeValues(newData);
+    const updateExpression = generateUpdateExpression(proceedData);
+    const expressionAttributeValues = generateUpdateExpressionAttributeValues(proceedData);
 
     const params = {
       TableName: TABLE_NAME,
@@ -135,3 +139,23 @@ exports.findOneAndDeleteTaskById = async (userEmail, id) => {
     throw new Error(error.message);
   }
 }
+
+exports.searchTaskByNote = async (userEmail, note, isChecked) => {
+  try {
+    const params = {
+      TableName: TABLE_NAME,
+      IndexName: 'queryableIndex',
+      KeyConditionExpression: 'pk = :pk AND begins_with(queryableField, :queryable)',
+      FilterExpression: 'contains(note, :note)',
+      ExpressionAttributeValues: {
+        ':pk': PK_VALUE.task,
+        ':queryable': `${userEmail}::${isChecked}`,
+        ':note': note
+      },
+    };
+    const queryResult = await docClient.query(params).promise();
+    return queryResult.Items;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};

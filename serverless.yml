@@ -65,6 +65,14 @@ functions:
           method: delete
           cors: true
           authorizer: authorize
+  searchTaskByNote:
+    handler: handler.searchTaskByNote
+    events:
+      - http:
+          path: /tasks/search
+          method: get
+          cors: true
+          authorizer: authorize
   graphql:
     handler: handler.graphql
     events:
@@ -137,19 +145,11 @@ resources:
           - AttributeName: sk
             KeyType: RANGE
         LocalSecondaryIndexes:
-          - IndexName: isCheckedIndex
+          - IndexName: queryableIndex
             KeySchema:
               - AttributeName: pk
                 KeyType: HASH
-              - AttributeName: isChecked
-                KeyType: RANGE
-            Projection:
-              ProjectionType: 'ALL'
-          - IndexName: noteIndex
-            KeySchema:
-              - AttributeName: pk
-                KeyType: HASH
-              - AttributeName: note
+              - AttributeName: queryableField
                 KeyType: RANGE
             Projection:
               ProjectionType: 'ALL'

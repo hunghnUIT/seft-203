@@ -104,8 +104,12 @@ module.exports.deleteTaskById = async function (event, context) {
 
 module.exports.searchTaskByNote = async function (event, context) {
   try {
-    if (event.pathParameters.keyword) {
-      
+    const userEmail = event.requestContext.authorizer.userEmail;
+    const keyword = event.queryStringParameters.keyword;
+    const filter = event.queryStringParameters.filter || '';
+    if (event.queryStringParameters.keyword) {
+      const result = await taskServices.searchTaskByNote(userEmail, keyword, filter);
+      return generateSuccessResponse(result);
     }
     return generateFailureResponse({ message: 'Not enough params' });
   } catch (error) {
