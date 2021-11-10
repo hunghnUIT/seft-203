@@ -126,6 +126,15 @@ functions:
           method: get
           cors: true
           authorizer: authorize
+  report:
+    handler: 
+      handler.report
+    events:
+      - http:
+          path: report/_countBy/{collection}/{field}
+          method: get
+          cors: true
+          authorizer: authorize
   authorize:
     handler: authorizer.authorize
 

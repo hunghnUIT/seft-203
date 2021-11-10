@@ -254,8 +254,26 @@ module.exports.logout = async function (event, context) {
 
 module.exports.report = async function (event, context) {
   try {
-    if (event.pathParameters.collection && event.pathParameters.field) {
+    const userEmail = event.requestContext.authorizer.userEmail;
+    const collection = event.pathParameters.collection;
+    const field = event.pathParameters.field;
 
+    if (collection && field) {
+      switch (collection) {
+        case 'tasks':
+          if (field === 'isChecked') {
+            const checkedTasksResult = await taskServices.reportCheckedTask(userEmail, true);
+            const uncheckedTasksResult = await taskServices.reportCheckedTask(userEmail, false);
+            return generateSuccessResponse({ 
+              ...checkedTasksResult,
+              ...uncheckedTasksResult
+            });
+          }
+          break;
+        default:
+          break;
+        }
+      return generateFailureResponse({ message: `Report with ${collection} on field ${field} is not implemented` }, 500);
     }
     return generateFailureResponse({ message: 'Not enough params' });
   } catch (error) {

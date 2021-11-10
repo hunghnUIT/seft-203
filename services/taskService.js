@@ -1,10 +1,13 @@
 const shortid = require('shortid');
-const {
-  docClient
-} = require('../libs/dynamoDb');
+const { docClient } = require('../libs/dynamoDb');
 const { PK_VALUE, TABLE_NAME } = require('../settings');
-const { generateUpdateExpression, generateUpdateExpressionAttributeValues } = require('../utils');
-const { generateTaskSk, generateQueryableFieldValue } = require('../utils');
+const { 
+  generateUpdateExpression, 
+  generateUpdateExpressionAttributeValues, 
+  generateTaskSk, 
+  generateQueryableFieldValue 
+} = require('../utils');
+const { queryAll } = require('../helpers/dynamoDb');
 
 
 /**
@@ -93,7 +96,7 @@ exports.getTaskById = async (userEmail, id) => {
  */
 exports.findOneAndUpdateTaskById = async (userEmail, id, newData) => {
   try {
-    const proceedData = {...newData};
+    const proceedData = { ...newData };
     if (proceedData.hasOwnProperty('isChecked')) {
       proceedData.queryableField = generateQueryableFieldValue([userEmail, proceedData.isChecked])
     }
@@ -110,7 +113,7 @@ exports.findOneAndUpdateTaskById = async (userEmail, id, newData) => {
       },
       UpdateExpression: updateExpression,
       ExpressionAttributeValues: expressionAttributeValues,
-      ReturnValues:'ALL_NEW',
+      ReturnValues: 'ALL_NEW',
     };
     const updatedItem = await docClient.update(params).promise();
 
@@ -155,6 +158,27 @@ exports.searchTaskByNote = async (userEmail, note, isChecked) => {
     };
     const queryResult = await docClient.query(params).promise();
     return queryResult.Items;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+exports.reportCheckedTask = async (userEmail, isCheckedValue) => {
+  try {
+    const params = {
+      TableName: TABLE_NAME,
+      IndexName: 'queryableIndex',
+      KeyConditionExpression: 'pk = :pk AND begins_with(queryableField, :queryable)',
+      ExpressionAttributeValues: {
+        ':pk': PK_VALUE.task,
+        ':queryable': `${userEmail}::${isCheckedValue}`,
+      },
+    };
+
+    const result = await queryAll(params, docClient);
+    return {
+      [isCheckedValue ? 'totalCheckedTasks' : 'totalUncheckedTasks']: result.length
+    }
   } catch (error) {
     throw new Error(error.message);
   }
