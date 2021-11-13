@@ -606,16 +606,19 @@ describe('handler/login', () => {
     let getUserByEmailStub;
     let matchPasswordStub;
     let getAccessTokenStub;
+    let saveToDbStub;
     beforeEach(() => {
       getUserByEmailStub = sinon.stub(docClient, 'get');
       matchPasswordStub = sinon.stub(User.prototype, 'matchPassword');
       getAccessTokenStub = sinon.stub(User.prototype, 'getAccessToken');
+      saveToDbStub = sinon.stub(User.prototype, 'saveToDb');
     });
 
     afterEach(() => {
       getUserByEmailStub.restore();
       matchPasswordStub.restore();
       getAccessTokenStub.restore();
+      saveToDbStub.restore();
     });
 
     it('should return invalid credentials if no user found with provided email', async () => {
@@ -683,6 +686,7 @@ describe('handler/login', () => {
       });
       matchPasswordStub.resolves(true);
       getAccessTokenStub.returns('token');
+      saveToDbStub.resolves({});
       const result = await login({ body: JSON.stringify({ email, password }) });
       sinon.assert.calledOnce(getAccessTokenStub);
       sinon.assert.match(result, successfulActionResult);

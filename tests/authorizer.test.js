@@ -52,9 +52,22 @@ describe('authorizer/authorize', () => {
     sinon.assert.calledWith(generateAuthResponseSpy, email, 'Deny', 'arn:testing');
   });
 
-  it('should generateAuthResponse with "Allow" params if no user found', async () => {
+  it('should generateAuthResponse with "Deny" params if user found but token is invalid', async () => {
     verifyStub.returns({ email });
-    getUserByEmailStub.resolves({ email });
+    getUserByEmailStub.resolves({ 
+      email,
+      checkUniqueValidToken: () => false
+    });
+    await authorize(sample_validEvent, null, callbackStub);
+    sinon.assert.calledWith(generateAuthResponseSpy, email, 'Deny', 'arn:testing');
+  });
+
+  it('should generateAuthResponse with "Allow" params if user found and token is valid', async () => {
+    verifyStub.returns({ email });
+    getUserByEmailStub.resolves({ 
+      email,
+      checkUniqueValidToken: () => true
+    });
     await authorize(sample_validEvent, null, callbackStub);
     sinon.assert.calledWith(generateAuthResponseSpy, email, 'Allow', 'arn:testing', {
       userEmail: email
