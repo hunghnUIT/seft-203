@@ -280,3 +280,24 @@ module.exports.report = async function (event, context) {
     return generateFailureResponse({ message: error.message }, 500);
   }
 }
+
+module.exports.importTask = async function (event, context) {
+  try {
+    const userEmail = event.requestContext.authorizer.userEmail;
+    const rawData = event.body;
+    assert.deepStrictEqual(typeof rawData, 'string', 'expected string body');
+
+    if (rawData) {
+      const proceedData = rawData.split('\r\n');
+      const importCount = await taskServices.importTask(userEmail, proceedData);
+      return generateSuccessResponse({ message: `Imported ${importCount} tasks` });
+    }
+
+    return generateFailureResponse({ message: 'Body is required' });
+  } catch (error) {
+    if (error.message === 'invalid data') {
+      return generateFailureResponse({ message: 'invalid data' });
+    }
+    return generateFailureResponse({ message: error.message }, 500);
+  }
+};

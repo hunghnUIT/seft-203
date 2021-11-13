@@ -73,6 +73,15 @@ functions:
           method: get
           cors: true
           authorizer: authorize
+  importTask:
+    handler: 
+      handler.importTask
+    events:
+      - http:
+          path: tasks/import
+          method: post
+          cors: true
+          authorizer: authorize
   graphql:
     handler: handler.graphql
     events:

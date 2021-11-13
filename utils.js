@@ -1,4 +1,4 @@
-const { SK_PATTERN_VALUE } = require('./settings')
+const { PK_VALUE, SK_PATTERN_VALUE } = require('./settings');
 
 /**
  * @param {Object} data returning data in *object* type
@@ -140,3 +140,24 @@ const generatePolicyDocument = (effect, methodArn) => {
 
   return policyDocument;
 }
+
+exports.generateDataPutItems = (userEmail, tasks) => {
+  const result = [];
+  for (const task of tasks) {
+    const taskDetail = task.split('|'); //following this order: taskId|note|isChecked
+    const item = { pk: PK_VALUE.task };
+
+    item.sk = this.generateTaskSk(userEmail, taskDetail[0]);
+    item.note = taskDetail[1];
+    item.isChecked = taskDetail[2];
+    item.queryableField = this.generateQueryableFieldValue([userEmail, taskDetail[2]]);
+
+    result.push({
+      PutRequest: {
+        Item: item
+      }
+    });
+  }
+
+  return result;
+};

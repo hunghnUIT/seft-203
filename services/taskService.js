@@ -1,11 +1,12 @@
 const shortid = require('shortid');
 const { docClient } = require('../libs/dynamoDb');
 const { PK_VALUE, TABLE_NAME } = require('../settings');
-const { 
-  generateUpdateExpression, 
-  generateUpdateExpressionAttributeValues, 
-  generateTaskSk, 
-  generateQueryableFieldValue 
+const {
+  generateUpdateExpression,
+  generateUpdateExpressionAttributeValues,
+  generateTaskSk,
+  generateQueryableFieldValue,
+  generateDataPutItems
 } = require('../utils');
 const { queryAll } = require('../helpers/dynamoDb');
 
@@ -179,6 +180,25 @@ exports.reportCheckedTask = async (userEmail, isCheckedValue) => {
     return {
       [isCheckedValue ? 'totalCheckedTasks' : 'totalUncheckedTasks']: result.length
     }
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+exports.importTask = async (userEmail, content) => {
+  try {
+    const items = generateDataPutItems(userEmail, content)
+
+    const params = {
+      RequestItems: {
+        [TABLE_NAME]: items
+      }
+    };
+    const result = await docClient.batchWrite(params).promise();
+
+    const failedCount = result.UnprocessedItems?.[TABLE_NAME]?.length || 0;
+    const successCount = content.length - failedCount;
+    return successCount;
   } catch (error) {
     throw new Error(error.message);
   }
