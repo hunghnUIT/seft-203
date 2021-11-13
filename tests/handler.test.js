@@ -2,7 +2,7 @@ const sinon = require('sinon');
 const { beforeEach, afterEach, it } = require('mocha');
 const jwt = require('jsonwebtoken');
 
-const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTaskById, register, verifyEmail, myAccount ,login } = require('../handler');
+const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTaskById, searchTaskByNote, register, verifyEmail, myAccount ,login } = require('../handler');
 const { docClient } = require('../libs/dynamoDb');
 const User = require('../models/User');
 
@@ -335,6 +335,59 @@ describe('handler/deleteTaskById', () => {
     sinon.assert.match(result, successfulActionResult)
   })
 })
+
+describe('handler/searchTaskByNote', () => {
+  const sample_authorizedEvent = {
+    requestContext: {
+      authorizer: {
+        userEmail: 'test@gmail.com'
+      }
+    }
+  };
+  let queryStub;
+
+  beforeEach(() => {
+    queryStub = sinon.stub(docClient, 'query');
+  });
+
+  afterEach(() => {
+    queryStub.restore();
+  });
+
+  it('should return bad request if no keyword provided', async () => {
+    const result = await searchTaskByNote({
+      queryStringParameters: {},
+      ...sample_authorizedEvent
+    });
+    sinon.assert.match(result, badRequestResult);
+  });
+
+  it('should return internal error if query with keyword failed', async () => {
+    queryStub.callsFake(() => {
+      return {
+        promise: () => Promise.reject(new Error('internal error'))
+      }
+    });
+    const result = await searchTaskByNote({
+      queryStringParameters: { keyword: 'test' },
+      ...sample_authorizedEvent
+    });
+    sinon.assert.match(result, internalErrorResult);
+  });
+
+  it('should return success if query with keyword done without error', async () => {
+    queryStub.callsFake(() => {
+      return {
+        promise: () => Promise.resolve({ Item: [] })
+      }
+    });
+    const result = await searchTaskByNote({
+      queryStringParameters: { keyword: 'test' },
+      ...sample_authorizedEvent
+    });
+    sinon.assert.match(result, successfulActionResult);
+  });
+});
 
 describe('handler/register', () => {
   const email = 'email@test.com';

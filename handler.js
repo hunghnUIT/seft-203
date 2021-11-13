@@ -107,7 +107,7 @@ module.exports.searchTaskByNote = async function (event, context) {
     const userEmail = event.requestContext.authorizer.userEmail;
     const keyword = event.queryStringParameters.keyword;
     const filter = event.queryStringParameters.filter || '';
-    if (event.queryStringParameters.keyword) {
+    if (keyword) {
       const result = await taskServices.searchTaskByNote(userEmail, keyword, filter);
       return generateSuccessResponse(result);
     }
@@ -273,7 +273,7 @@ module.exports.report = async function (event, context) {
         default:
           break;
         }
-      return generateFailureResponse({ message: `Report with ${collection} on field ${field} is not implemented` }, 500);
+      return generateFailureResponse({ message: `Report with ${collection} on field ${field} is not implemented` }, 400);
     }
     return generateFailureResponse({ message: 'Not enough params' });
   } catch (error) {
