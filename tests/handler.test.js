@@ -2,9 +2,18 @@ const sinon = require('sinon');
 const { beforeEach, afterEach, it } = require('mocha');
 const jwt = require('jsonwebtoken');
 
-const { createTask, getAllTasks, getTaskById, updateTaskById, deleteTaskById, searchTaskByNote, register, verifyEmail, myAccount ,login } = require('../handler');
+const { 
+  createTask, getAllTasks, 
+  getTaskById, updateTaskById, 
+  deleteTaskById, searchTaskByNote, 
+  register, verifyEmail, 
+  myAccount, login,
+  report, importTask,
+  logout
+} = require('../handler');
 const { docClient } = require('../libs/dynamoDb');
 const User = require('../models/User');
+const userService = require('../services/userService');
 
 const successfulActionResult = { statusCode: 200 };
 const badRequestResult = { statusCode: 400 };
@@ -743,6 +752,202 @@ describe('handler/login', () => {
       const result = await login({ body: JSON.stringify({ email, password }) });
       sinon.assert.calledOnce(getAccessTokenStub);
       sinon.assert.match(result, successfulActionResult);
+    });
+  });
+});
+
+describe('handler/logout', () => {
+  const sample_authorizedEvent = {
+    requestContext: {
+      authorizer: {
+        userEmail: 'test@example.com'
+      }
+    }
+  };
+  let getUserStub;
+
+  beforeEach(() => {
+    getUserStub = sinon.stub(userService, 'getUserByEmail');
+  });
+
+  afterEach(() => {
+    getUserStub.restore();
+  });
+
+  it('should return internal error if error occurred', async () => {
+    getUserStub.rejects(new Error('internal error'));
+    const result = await logout(sample_authorizedEvent);
+    sinon.assert.match(result, internalErrorResult);
+  });
+
+  it('should log out and remove saved token', async () => {
+    const sample_user = {
+      setToken: sinon.spy(),
+      saveToDb: sinon.spy(),
+    };
+    getUserStub.resolves(sample_user);
+    const result = await logout(sample_authorizedEvent);
+    sinon.assert.calledOnce(sample_user.setToken);
+    sinon.assert.calledOnce(sample_user.saveToDb);
+    sinon.assert.match(result, successfulActionResult);
+  });
+});
+
+describe('handler/report', () => {
+  const sample_authorizedEvent = {
+    requestContext: {
+      authorizer: {
+        userEmail: 'test@gmail.com'
+      }
+    }
+  };
+
+  describe('validation', () => {
+    it('should return bad request if no collection provided', async () => {
+      const result = await report({
+        pathParameters: {
+          collection: 'collection',
+        },
+        ...sample_authorizedEvent
+      });
+      sinon.assert.match(result, badRequestResult);
+    });
+  
+    it('should return bad request if no field provided', async () => {
+      const result = await report({
+        pathParameters: {
+          field: 'field',
+        },
+        ...sample_authorizedEvent
+      });
+      sinon.assert.match(result, badRequestResult);
+    });
+  
+    it('should return bad request if no collection report is not implemented', async () => {
+      const result = await report({
+        pathParameters: {
+          collection: 'collection',
+          field: 'field',
+        },
+        ...sample_authorizedEvent
+      });
+      sinon.assert.match(result, badRequestResult);
+    });
+  
+    it('should return bad request if report on provided field is not implemented', async () => {
+      const result = await report({
+        pathParameters: {
+          collection: 'tasks',
+          field: 'field',
+        },
+        ...sample_authorizedEvent
+      });
+      sinon.assert.match(result, badRequestResult);
+    });
+  });
+
+  describe('execution', () => {
+    const sample_validPathParams = {
+      pathParameters: {
+        collection: 'tasks',
+        field: 'isChecked',
+      }
+    };
+    let queryStub;
+
+    beforeEach(() => {
+      queryStub = sinon.stub(docClient, 'query');
+    });
+
+    afterEach(() => {
+      queryStub.restore();
+    });
+
+    it('should return internal error if query user encountered error', async () => {
+      queryStub.callsFake(() => {
+        return {
+          promise: () => Promise.reject(new Error('internal error'))
+        };
+      });
+      const result = await report({
+        ...sample_validPathParams,
+        ...sample_authorizedEvent
+      });
+      sinon.assert.match(result, internalErrorResult);
+    });
+
+    it('should return success if query user succeed', async () => {
+      const sample_successResult = {body:'{"success":true,"data":{"totalCheckedTasks":1,"totalUncheckedTasks":1}}'};
+      queryStub.callsFake(() => {
+        return {
+          promise: () => Promise.resolve({ Items: [{}]})
+        };
+      });
+      const result = await report({
+        ...sample_validPathParams,
+        ...sample_authorizedEvent
+      });
+      sinon.assert.match(result, {
+        ...successfulActionResult,
+        ...sample_successResult
+      });
+    });
+  });
+});
+
+describe('handler/importTask', () => {
+  const sample_authorizedEvent = {
+    requestContext: {
+      authorizer: {
+        userEmail: 'test@example.com'
+      }
+    }
+  };
+  describe('validation', () => {
+    it('should return bad request if no body is provided', async () => {
+      const result = await importTask(sample_authorizedEvent);
+      sinon.assert.match(result, badRequestResult);
+    });
+  });
+
+  describe('execution', () => {
+    const sample_validEvent = {
+      body: '123abc|test|true'
+    };
+    let batchWriteStub;
+
+    beforeEach(() => {
+      batchWriteStub = sinon.stub(docClient, 'batchWrite');
+    });
+
+    afterEach(() => {
+      batchWriteStub.restore();
+    });
+
+    it('should return internal error if batchWrite encountered error', async () => {
+      batchWriteStub.callsFake(() => ({
+        promise: () => Promise.reject(new Error('internal error'))
+      }));
+      const result = await importTask({
+        ...sample_authorizedEvent,
+        ...sample_validEvent,
+      });
+      sinon.assert.match(result, internalErrorResult);
+    });
+
+    it('should return success result if not error occurred', async () => {
+      const sample_successResult = {
+        ...successfulActionResult,
+        body: '{"success":true,"data":{"message":"Imported 1 tasks"}}'
+      }
+      batchWriteStub.callsFake(() => ({
+        promise: () => Promise.resolve(new Error('internal error'))
+      }));
+      const result = await importTask({
+        ...sample_authorizedEvent,
+        ...sample_validEvent,
+      });
+      sinon.assert.match(result, sample_successResult);
     });
   });
 });

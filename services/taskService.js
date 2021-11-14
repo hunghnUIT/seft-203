@@ -187,7 +187,7 @@ exports.reportCheckedTask = async (userEmail, isCheckedValue) => {
 
 exports.importTask = async (userEmail, content) => {
   try {
-    const items = generateDataPutItems(userEmail, content)
+    const items = generateDataPutItems(userEmail, content);
 
     const params = {
       RequestItems: {

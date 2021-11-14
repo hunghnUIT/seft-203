@@ -287,16 +287,12 @@ module.exports.importTask = async function (event, context) {
     const rawData = event.body;
     assert.deepStrictEqual(typeof rawData, 'string', 'expected string body');
 
-    if (rawData) {
-      const proceedData = rawData.split('\r\n');
-      const importCount = await taskServices.importTask(userEmail, proceedData);
-      return generateSuccessResponse({ message: `Imported ${importCount} tasks` });
-    }
-
-    return generateFailureResponse({ message: 'Body is required' });
+    const proceedData = rawData.split('\r\n');
+    const importCount = await taskServices.importTask(userEmail, proceedData);
+    return generateSuccessResponse({ message: `Imported ${importCount} tasks` });
   } catch (error) {
-    if (error.message === 'invalid data') {
-      return generateFailureResponse({ message: 'invalid data' });
+    if (error.message === 'invalid data' || error.message.includes('expected')) {
+      return generateFailureResponse({ message: 'invalid body data' });
     }
     return generateFailureResponse({ message: error.message }, 500);
   }
