@@ -9,10 +9,6 @@ const {
   removeUndefinedFields
 } = require('./utils');
 
-const graphQLSchema = require('./libs/graphQlSchema');
-const graphql = require('graphql');
-
-
 module.exports.createTask = async function (event, context) {
   try {
     const userEmail = event.requestContext.authorizer.userEmail;
@@ -115,16 +111,6 @@ module.exports.searchTaskByNote = async function (event, context) {
   } catch (error) {
     return generateFailureResponse({ message: error.message }, 500);
   }
-}
-
-module.exports.graphql = async function (event, context) {
-  return graphql.graphql(graphQLSchema, event.body)
-    .then(result => {
-      if (result.hasOwnProperty('data'))
-        return generateSuccessResponse(result, 200, true);
-
-      return generateFailureResponse(result, 400, true);
-    })
 }
 
 module.exports.register = async function (event, context) {

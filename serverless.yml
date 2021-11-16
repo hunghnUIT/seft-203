@@ -82,12 +82,6 @@ functions:
           method: post
           cors: true
           authorizer: authorize
-  graphql:
-    handler: handler.graphql
-    events:
-      - http:
-          path: /graphql
-          method: post
   register:
     handler: 
       handler.register
